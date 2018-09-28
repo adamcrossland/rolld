@@ -11,7 +11,6 @@ import (
 // Information pertaining to the database that is being managed. This should
 // probably all be opaque to the user.
 type ManagedDB struct {
-	migrationLevel   int
 	DB               *sql.DB
 	dbLock           chan int
 	migrations       map[int]dbMigration
@@ -21,7 +20,7 @@ type ManagedDB struct {
 // Create an initialize a new ManagedDB with the given file path and
 // datatbase driver.
 func NewManagedDB(dbPath string, driver string) *ManagedDB {
-	var newDB := new(ManagedDB)
+	newDB := new(ManagedDB)
 	var err error
 
 	newDB.DB, err = sql.Open(driver, dbPath)
@@ -32,10 +31,11 @@ func NewManagedDB(dbPath string, driver string) *ManagedDB {
 	newDB.dbLock = make(chan int)
 
 	// Figure out what the current migration is
-	newDB.migrationLevel = newDB.getCurrentMigration()
-
+	newDB.currentMigration = newDB.getCurrentMigration()
+	log.Printf("current migration level: %d", newDB.currentMigration)
 	newDB.migrations = map[int]dbMigration{
 		1: dbMigration{up: migration1up, down: migration1down},
+		2: dbMigration{up: migration2up, down: migration2down},
 	}
 
 	newDB.databaseMigrate(-1)
@@ -81,19 +81,19 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 			mdb.currentMigration--
 			dbErr = mdb.migrations[mdb.currentMigration].down(mdb.DB)
 			if dbErr != nil {
-				panic(fmt.Sprintf("db migration %d down failed", mdb.currentMigration))
+				panic(fmt.Sprintf("db migration %d down failed: %v", mdb.currentMigration, dbErr))
 				mdb.currentMigration++
 			} else {
 				mdb.setCurrentMigration(mdb.currentMigration)
 			}
 		}
-	} else {
+	} else if mdb.currentMigration < toMigration {
 		// Migrating up.
 		for mdb.currentMigration < toMigration {
 			mdb.currentMigration++
 			dbErr = mdb.migrations[mdb.currentMigration].up(mdb.DB)
 			if dbErr != nil {
-				panic(fmt.Sprintf("db migration %d up failed", mdb.currentMigration))
+				panic(fmt.Sprintf("db migration %d up failed: %v", mdb.currentMigration, dbErr))
 				mdb.currentMigration--
 			} else {
 				mdb.setCurrentMigration(mdb.currentMigration)
@@ -117,6 +117,19 @@ func migration1up(db *sql.DB) error {
 
 func migration1down(db *sql.DB) error {
 	_, err := db.Exec("drop table db_metadata")
+
+	return err
+}
+
+func migration2up(db *sql.DB) error {
+	_, err := db.Exec(`create table sessions (id text primary key, connections integer, created integer);
+	create table connections (id text primary key, session text, name text, created integer)`)
+
+	return err
+}
+
+func migration2down(db *sql.DB) error {
+	_, err := db.Exec("drop table sessions")
 
 	return err
 }
