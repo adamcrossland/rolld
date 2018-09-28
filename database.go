@@ -8,6 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Information pertaining to the database that is being managed. This should
+// probably all be opaque to the user.
 type ManagedDB struct {
 	migrationLevel   int
 	DB               *sql.DB
@@ -16,8 +18,10 @@ type ManagedDB struct {
 	currentMigration int
 }
 
+// Create an initialize a new ManagedDB with the given file path and
+// datatbase driver.
 func NewManagedDB(dbPath string, driver string) *ManagedDB {
-	var newDB *ManagedDB = new(ManagedDB)
+	var newDB := new(ManagedDB)
 	var err error
 
 	newDB.DB, err = sql.Open(driver, dbPath)
