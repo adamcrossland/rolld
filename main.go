@@ -5,22 +5,23 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"time"
 
 	"github.com/gorilla/mux"
 )
 
-var db *ManagedDB
+var model RolldModel
 
 func main() {
 	dbFilename := os.Getenv("ROLLD_DATABASE_FILE")
 	if dbFilename == "" {
 		panic("environment variable ROLLD_DATABASE_FILE must be set")
 	}
-	db = NewManagedDB(dbFilename, "sqlite3")
+	db := NewManagedDB(dbFilename, "sqlite3")
+	model = NewModel(db)
 
 	r := mux.NewRouter()
 	r.HandleFunc("/start/{connCount}", start)
+	r.HandleFunc("/connect/{session}/{name}", connect)
 	http.Handle("/", r)
 	http.ListenAndServe(":8080", nil)
 }
@@ -35,18 +36,30 @@ func start(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	stored := false
-	timestamp := time.Now().Unix()
-
-	for !stored {
-		newSessionID := GetRandomID()
-		_, err := db.DB.Exec("insert into sessions (id, connections, created) values (?,?,?)",
-			newSessionID, requestedSessionCount, timestamp)
-		if err == nil {
-			fmt.Fprintf(w, "%s", newSessionID)
-			break
-		}
-	}
+	newSession := model.NewSession(requestedSessionCount)
+	fmt.Fprintf(w, "%s", newSession.ID)
 
 	return
+}
+
+func connect(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	sessionID := vars["session"]
+	if sessionID == nil || sessionID == "" {
+		http.Error(w, "session must be provided", 400)
+		return
+	}
+
+	requestedName := vars["name"]
+	if requestedName == nil || requestedName == "" {
+		http.Error(w, "name must be provided", 400)
+		return
+	}
+
+	session, sesserr := model.GetSession(sessionID)
+	if sesserr != nil {
+		http.Error(w, "Session does not exist", 400)
+	}
+
 }
