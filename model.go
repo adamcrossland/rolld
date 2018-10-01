@@ -3,6 +3,7 @@ package main
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"time"
 )
 
@@ -70,7 +71,7 @@ func (model *RolldModel) GetSession(sessionID string) (*Session, error) {
 		foundSession.ConnectionCount = count
 		foundSession.Created = created
 	} else {
-		return nil, errors.New("Query GetSession returned 0 rows.")
+		return nil, fmt.Errorf("session %s does not exist.", sessionID)
 	}
 
 	return foundSession, nil
