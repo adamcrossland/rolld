@@ -9,7 +9,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var model RolldModel
+var model *RolldModel
 
 func main() {
 	dbFilename := os.Getenv("ROLLD_DATABASE_FILE")
@@ -30,7 +30,7 @@ func main() {
 // in all subsequent API calls.
 func start(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
-	requestedSessionCount, parseErr := strconv.ParseUint(vars["connCount"], 10, 8)
+	requestedSessionCount, parseErr := strconv.Atoi(vars["connCount"])
 	if parseErr != nil {
 		http.Error(w, "connCount could not be understood as an unsigned, 8-bit integer", 400)
 		return
@@ -46,13 +46,13 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
 	sessionID := vars["session"]
-	if sessionID == nil || sessionID == "" {
+	if sessionID == "" {
 		http.Error(w, "session must be provided", 400)
 		return
 	}
 
 	requestedName := vars["name"]
-	if requestedName == nil || requestedName == "" {
+	if requestedName == "" {
 		http.Error(w, "name must be provided", 400)
 		return
 	}
@@ -60,6 +60,21 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	session, sesserr := model.GetSession(sessionID)
 	if sesserr != nil {
 		http.Error(w, "Session does not exist", 400)
+		return
 	}
 
+	if session.NameTaken(requestedName) {
+		http.Error(w, "The name is already taken", 400)
+		return
+	}
+
+	conn, newConnErr := session.AddConnection(requestedName)
+	if newConnErr != nil {
+		http.Error(w, "Could not add connection. Try again later.", 500)
+		return
+	}
+
+	fmt.Fprintf(w, "%s", conn.ID)
+
+	return
 }
