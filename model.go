@@ -3,7 +3,6 @@ package main
 import (
 	"database/sql"
 	"errors"
-	"fmt"
 	"time"
 )
 
@@ -56,40 +55,22 @@ func (model *RolldModel) NewSession(connectionCount int) Session {
 }
 
 func (model *RolldModel) GetSession(sessionID string) (*Session, error) {
-	stmt, err := model.db.DB.Prepare("select id, connections, created from sessions where id = ?")
-	if err != nil {
-		fmt.Printf("error preparing session query: %v", err)
-		return nil, nil
-	}
-	defer stmt.Close()
-
-	fmt.Printf("Retrieving session %s\n", sessionID)
-	var sessID string
-	var count int
-	var created int64
-	rows, queryErr := stmt.Query(sessionID)
+	row := model.db.DB.QueryRow("select id, connections, created from sessions where id = ?", sessionID)
 
 	var foundSession *Session
 
-	if queryErr == nil || queryErr != sql.ErrNoRows {
-		defer rows.Close()
-		if rows.Next() {
-			foundSession = new(Session)
-			rows.Scan(&sessID, &count, &created)
+	var sessID string
+	var count int
+	var created int64
+	if row.Scan(&sessID, &count, &created) != sql.ErrNoRows {
+		foundSession = new(Session)
 
-			foundSession.model = model
-			foundSession.ID = sessID
-			foundSession.ConnectionCount = count
-			foundSession.Created = created
-
-			fmt.Printf("sessID = %s\n", sessID)
-			fmt.Printf("count = %d\n", count)
-			fmt.Printf("created = %d\n", created)
-		} else {
-			return nil, errors.New("Query GetSession returned 0 rows.")
-		}
+		foundSession.model = model
+		foundSession.ID = sessID
+		foundSession.ConnectionCount = count
+		foundSession.Created = created
 	} else {
-		return nil, queryErr
+		return nil, errors.New("Query GetSession returned 0 rows.")
 	}
 
 	return foundSession, nil
