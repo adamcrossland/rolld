@@ -5,13 +5,22 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"sync"
 
 	"github.com/adamcrossland/rolld/manageddb"
 	"github.com/adamcrossland/rolld/models"
+	"github.com/adamcrossland/rolld/rolldcomm"
 	"github.com/gorilla/mux"
+	"github.com/gorilla/websocket"
 )
 
 var model *models.RolldModel
+sessions := make(map[string]rolldcomm.CommSession, 50)
+var sessionLock *sync.Mutex
+var upgrader = websocket.Upgrader{
+    ReadBufferSize:  1024,
+    WriteBufferSize: 1024,
+}
 
 func main() {
 	dbFilename := os.Getenv("ROLLD_DATABASE_FILE")
@@ -24,6 +33,7 @@ func main() {
 	r := mux.NewRouter()
 	r.HandleFunc("/start/{connCount}", start)
 	r.HandleFunc("/connect/{session}/{name}", connect)
+	r.HandleFunc("/messages/{session}/{connection}", messages)
 	http.Handle("/", r)
 	http.ListenAndServe(":8080", nil)
 }
@@ -44,6 +54,7 @@ func start(w http.ResponseWriter, r *http.Request) {
 	return
 }
 
+// Claim one of the slots in a session
 func connect(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 
@@ -79,4 +90,43 @@ func connect(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "%s", conn.ID)
 
 	return
+}
+
+// Begin to send messages to the server that are processed and
+// potentially communicated to other subscribers
+func messages(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+
+	sessionID := vars["session"]
+	if sessionID == "" {
+		http.Error(w, "session must be provided", 400)
+		return
+	}
+
+	requestedSession, reqSessErr := model.GetSession(sessionID)
+	if reqSessErr != nil {
+		http.Error(w, "could not find session in database", 500)
+		return
+	}
+
+	connectionID := vars["connection"]
+	if connectionID == "" {
+		http.Error(w, "connection must be provided", 400)
+		return
+	}
+
+	requestedConnection, reqConnErr := requestedSession.GetConnection(connectionID)
+	if reqConnErr != nil {
+		http.Error(w, "could not find connection in database", 500)
+		return
+	}
+
+	sessionLock.Lock()
+	if sessions[sessionID] == nil {
+		sessions[sessionID] = rolldcomm.NewCommSession(sessionID)
+	}
+	sessionLock.Unlock()
+
+
+	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name)
 }
