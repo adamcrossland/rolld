@@ -25,7 +25,14 @@ func main() {
 	r.HandleFunc("/start/{connCount}", start)
 	r.HandleFunc("/connect/{session}/{name}", connect)
 	http.Handle("/", r)
-	http.ListenAndServe(":8080", nil)
+
+	servingAddress := os.Getenv("ROLLD_SERVER_ADDRESS")
+	if servingAddress == "" {
+		panic("environment variable ROLLD_SERVER_ADDRESS must be set")
+	}
+	fmt.Printf("Listening on %s\n", servingAddress)
+
+	http.ListenAndServe(servingAddress, nil)
 }
 
 // Initiate a new rolld session. Returns a SessionID that must be included
