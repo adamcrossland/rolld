@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
@@ -21,6 +22,7 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 }
+var cachedClient []byte
 
 func main() {
 	sessions = make(map[string]*rolldcomm.CommSession)
@@ -36,6 +38,8 @@ func main() {
 	r.HandleFunc("/start/{connCount}", start)
 	r.HandleFunc("/connect/{session}/{name}", connect)
 	r.HandleFunc("/messages/{session}/{connection}", messages)
+	r.HandleFunc("/hello", hello)
+	r.HandleFunc("/client", client)
 	http.Handle("/", r)
 
 	servingAddress := os.Getenv("ROLLD_SERVER_ADDRESS")
@@ -137,4 +141,22 @@ func messages(w http.ResponseWriter, r *http.Request) {
 	sessionLock.Unlock()
 
 	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, nil)
+}
+
+func hello(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "rolld ack")
+}
+
+func client(w http.ResponseWriter, r *http.Request) {
+	// First, make sure that we have tyhe client loaded. We keep a cached copy
+	// since it is not large and needn't be read from disk each time.
+	if len(cachedClient) == 0 {
+		var clientLoadError error
+		cachedClient, clientLoadError = ioutil.ReadFile("./rolld-client.html")
+		if clientLoadError != nil {
+			panic("unable to load client file")
+		}
+	}
+
+	fmt.Fprintf(w, "%s", cachedClient)
 }
