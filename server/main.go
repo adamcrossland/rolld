@@ -15,14 +15,16 @@ import (
 )
 
 var model *models.RolldModel
-sessions := make(map[string]rolldcomm.CommSession, 50)
+var sessions map[string]*rolldcomm.CommSession
 var sessionLock *sync.Mutex
 var upgrader = websocket.Upgrader{
-    ReadBufferSize:  1024,
-    WriteBufferSize: 1024,
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
 }
 
 func main() {
+	sessions = make(map[string]*rolldcomm.CommSession)
+
 	dbFilename := os.Getenv("ROLLD_DATABASE_FILE")
 	if dbFilename == "" {
 		panic("environment variable ROLLD_DATABASE_FILE must be set")
@@ -134,6 +136,5 @@ func messages(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionLock.Unlock()
 
-
-	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name)
+	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, nil)
 }

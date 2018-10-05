@@ -80,7 +80,7 @@ func (model *RolldModel) GetSession(sessionID string) (*Session, error) {
 }
 
 func (session Session) GetConnection(id string) (*Connection, error) {
-	row := model.db.DB.QueryRow("select id, name, created from connections where id = ? and session = ?", id, session.ID)
+	row := session.model.db.DB.QueryRow("select id, name, created from connections where id = ? and session = ?", id, session.ID)
 
 	var foundConnection *Connection
 	var connID string
@@ -99,7 +99,7 @@ func (session Session) GetConnection(id string) (*Connection, error) {
 		return nil, fmt.Errorf("connection %s in session %s does not exist")
 	}
 
-	return foundConnection, nill
+	return foundConnection, nil
 }
 
 func (session Session) NameTaken(name string) bool {
