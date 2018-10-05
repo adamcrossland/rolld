@@ -45,19 +45,19 @@
                 <div class="columns">
                     <div class="column col-3" style="border-width: 1px; margin-right: .5em">
                         <h4>Start a new session</h4>
-                        <button class="btn">Start</button>
+                        <button class="btn connected-only">Start</button>
                     </div>
                     <div class="divider-vert" data-content="OR"></div>
                     <div class="column col-3" style="border-width: 1px; margin-left: .5em">
                         <h4>Use an existing session</h4>
                         <label class="form-label" for="sessionid">Session</label>
-                        <input class="form-input" type="text" id="sessionid"
-                            placeholder="Session ID"/>
+                        <input class="form-input connected-only" type="text" id="sessionid"
+                            placeholder="Session ID" />
                         <label class="form-label" for="name">Name</label>
-                        <input class="form-input" type="text" id="name"
-                            placeholder="Name"/>
+                        <input class="form-input connected-only" type="text" id="name"
+                            placeholder="Name" />
                             <br/>
-                        <button class="btn">Connect</button>
+                        <button class="btn connected-only">Connect</button>
                     </div>
                 </div>
             </div>
@@ -123,6 +123,7 @@
                 if (data = "rolld ack") {
                     $("#server-address-tested").show();
                     serverAddr = $("#rolldaddress").val();
+                    $(".connected-only").prop("disabled", false)
                 } else {
                     $("#server-address-tested").hide();
                     serverAddr = "";
@@ -163,7 +164,8 @@
 
             $("#rolldaddress").val(location.host);
             $("#server-address-tested").hide();
-            $('input:radio[name=accordion-radio]:nth(0)').attr('checked',true);
+            $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
+            $(".connected-only").prop("disabled", true)
         });
     </script>
 </body>
