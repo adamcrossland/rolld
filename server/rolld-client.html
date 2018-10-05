@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Rolld Client</title>
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <style>
+    </style>
+</head>
+<body>
+    <div class="container" style="margin: 2em">
+        <div class="columns" style="margin-bottom: 1em">
+            <div class="col-3">
+                <h1>Rolld Client</h1>
+            </div>
+            <div class="divider-vert"></div>
+            <div class="col-3">
+                <h5>A simple, sample client for Rolld</h5>
+                <p>
+                    The Rolld server is a tool to assist with playing
+                    fantasy role-playing games over the Internet. It rolls 
+                    dice in a secure fashion that everyone can see and share.
+                </p>
+            </div>
+        </div>
+        <div class="accordion">
+            <input type="radio" id="accordion-1" name="accordion-radio" hidden checked="true">
+            <label class="accordion-header" for="accordion-1">
+                <i class="icon icon-arrow-right mr-1"></i>
+                <b>Connect</b>
+            </label>
+            <div class="accordion-body col-12">
+                <div class="columns" style="margin-bottom: 1em; margin-left: 0em">
+                    <div class="input-group has-icon-left">
+                            <input class="form-input" type="text" id="rolldaddress"
+                                   placeholder="Rolld server address"/>
+                            <i id="server-address-tested" class="form-icon icon icon-check" style="color: green"></i>
+                        <button class="btn btn-primary input-group-btn" id="server-address-test">Test</button>
+                    </div>
+                </div>
+                <div class="columns">
+                    <div class="column col-3" style="border-width: 1px; margin-right: .5em">
+                        <h4>Start a new session</h4>
+                        <button class="btn">Start</button>
+                    </div>
+                    <div class="divider-vert" data-content="OR"></div>
+                    <div class="column col-3" style="border-width: 1px; margin-left: .5em">
+                        <h4>Use an existing session</h4>
+                        <label class="form-label" for="sessionid">Session</label>
+                        <input class="form-input" type="text" id="sessionid"
+                            placeholder="Session ID"/>
+                        <label class="form-label" for="name">Name</label>
+                        <input class="form-input" type="text" id="name"
+                            placeholder="Name"/>
+                            <br/>
+                        <button class="btn">Connect</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <input type="radio" id="accordion-2" name="accordion-radio" hidden checked="false" >
+            <label class="accordion-header" for="accordion-2">
+                <i class="icon icon-arrow-right mr-1"></i>
+                <b>Roll</b>
+            </label>
+            <div class="accordion-body col-12">
+                <div class="columns">
+                    <div class="column col-3">
+                        <div class="panel">
+                            <div class="panel-header">
+                                <div class="panel-title">Rolls</div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="empty">
+                                    <div class="empty-icon">
+                                        <i class="icon icon-upload"></i>
+                                    </div>
+                                    <p class="empty-title h5">Not connected</p>
+                                    <p class="empty-subtitle">You are not connected to a Rolld server.</p>
+                                    <div class="empty-action">
+                                        Use the <b>Connect</b> area above to make a connection
+                                        to a Rolld server.
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="panel-footer" style="visibility: hidden">
+                                <!-- buttons or inputs -->
+                                <input type="text" id="commands" placeholder="Roll here" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column col-3">
+                        <div class="panel" style="visibility: hidden">
+                            <div class="panel-header">
+                                <div class="panel-title">Info</div>
+                            </div>
+                            <div class="panel-body">
+                                <div class="empty"></div>
+                            </div>
+                            <div class="panel-footer">
+                                <button class="btn btn-primary">Quit</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        rolld = {};
+        rolld.server = (function() {
+            let serverAddr = "";
+            let sessionToken = "";
+            let connectionToken = "";
+            let name = "";
+
+            let testSuccess = function(data) {
+                if (data = "rolld ack") {
+                    $("#server-address-tested").show();
+                    serverAddr = $("#rolldaddress").val();
+                } else {
+                    $("#server-address-tested").hide();
+                    serverAddr = "";
+                }
+            };
+
+            let testServerAddress = function() {
+                let address = $("#rolldaddress").val();
+                let testUrl = address
+                if (!address.endsWith("/")) {
+                    address += "/";
+                }
+                address = "/hello";
+
+                jQuery.get({
+                    url: address,
+                    success: testSuccess,
+                    dataType: "text",
+                    crossDomain: true
+                }).fail(function() {
+                    testSuccess("");
+                }).always(function() {
+                    $("#server-address-test").removeClass("loading");
+                });
+            };
+
+            return {
+                testServerAddress: testServerAddress
+            }
+        }());
+
+        $.when($.ready).then(function() {
+            $("#server-address-test").click(function(e) {
+                e.preventDefault();
+                $("#server-address-test").addClass("loading");
+                rolld.server.testServerAddress();
+            });
+
+            $("#rolldaddress").val(location.host);
+            $("#server-address-tested").hide();
+            $('input:radio[name=accordion-radio]:nth(0)').attr('checked',true);
+        });
+    </script>
+</body>
+</html>
