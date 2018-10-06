@@ -9,6 +9,9 @@
     <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
     <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
     <style>
+        #sessionID {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -45,7 +48,18 @@
                 <div class="columns">
                     <div class="column col-3" style="border-width: 1px; margin-right: .5em">
                         <h4>Start a new session</h4>
-                        <button class="btn connected-only">Start</button>
+                        <label class="form-label" for="new-session-count">Participants</label>
+                        <input class="form-input connected-only" type="number" id="start-count"
+                                placeholder="# of participants" />
+                        <br/>
+                        <button id="new-session-start" class="btn connected-only">Start</button>
+                        <div id="startResults">
+                                <p>
+                                The ID for your new session is
+                                <span id="session-id-share"></span>.
+                                Give it to the other players.
+                                </p>
+                        </div>
                     </div>
                     <div class="divider-vert" data-content="OR"></div>
                     <div class="column col-3" style="border-width: 1px; margin-left: .5em">
@@ -131,12 +145,7 @@
             };
 
             let testServerAddress = function() {
-                let address = $("#rolldaddress").val();
-                let testUrl = address
-                if (!address.endsWith("/")) {
-                    address += "/";
-                }
-                address = "/hello";
+                let address = "/hello";
 
                 jQuery.get({
                     url: address,
@@ -150,8 +159,35 @@
                 });
             };
 
+            let startSuccess = function(data) {
+                if (data != "") {
+                    sessionToken = data;
+                    $("#session-id-share").text(sessionToken);
+                    $("#startResults").show();
+                    $("#sessionid").val(sessionToken);
+                } else {
+
+                }
+            };
+
+            let startNewSession = function() {
+                let address = "/start/" + $("#start-count").val();
+
+                jQuery.get({
+                    url: address,
+                    success: startSuccess,
+                    dataType: "text",
+                    crossDomain: true
+                }).fail(function() {
+
+                }).always(function() {
+                    $("#new-session-start").removeClass("loading");
+                });
+            };
+
             return {
-                testServerAddress: testServerAddress
+                testServerAddress: testServerAddress,
+                startNewSession: startNewSession
             }
         }());
 
@@ -162,10 +198,17 @@
                 rolld.server.testServerAddress();
             });
 
+            $("#new-session-start").click(function(e) {
+                e.preventDefault();
+                $("#new-session-start").addClass("loading");
+                rolld.server.startNewSession();
+            });
+
             $("#rolldaddress").val(location.host);
             $("#server-address-tested").hide();
             $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
-            $(".connected-only").prop("disabled", true)
+            $(".connected-only").prop("disabled", true);
+            $("#startResults").hide();
         });
     </script>
 </body>
