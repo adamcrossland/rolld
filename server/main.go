@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 
 	"github.com/adamcrossland/rolld/manageddb"
@@ -23,8 +24,17 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 var cachedClient []byte
+var dontCache bool
 
 func main() {
+	argsWithoutProg := os.Args[1:]
+	for i := 0; i < len(argsWithoutProg); i++ {
+		switch strings.ToLower(argsWithoutProg[i]) {
+		case "--no-cache":
+			dontCache = true
+		}
+	}
+
 	sessions = make(map[string]*rolldcomm.CommSession)
 
 	dbFilename := os.Getenv("ROLLD_DATABASE_FILE")
@@ -150,7 +160,7 @@ func hello(w http.ResponseWriter, r *http.Request) {
 func client(w http.ResponseWriter, r *http.Request) {
 	// First, make sure that we have tyhe client loaded. We keep a cached copy
 	// since it is not large and needn't be read from disk each time.
-	if len(cachedClient) == 0 {
+	if len(cachedClient) == 0 || dontCache {
 		var clientLoadError error
 		cachedClient, clientLoadError = ioutil.ReadFile("./rolld-client.html")
 		if clientLoadError != nil {
