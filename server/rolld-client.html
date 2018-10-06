@@ -171,18 +171,41 @@
             };
 
             let startNewSession = function() {
-                let address = "/start/" + $("#start-count").val();
+                let startCount = $("#start-count").val();
 
-                jQuery.get({
-                    url: address,
-                    success: startSuccess,
-                    dataType: "text",
-                    crossDomain: true
-                }).fail(function() {
+                if (startCount != "") {
+                    startCount = Number(startCount);
+                    if (!Number.isNaN(startCount)) {
+                        if (Number.isInteger(startCount)) {
+                            if (startCount > 0) {
+                                let address = "/start/" + startCount;
 
-                }).always(function() {
+                                jQuery.get({
+                                    url: address,
+                                    success: startSuccess,
+                                    dataType: "text",
+                                    crossDomain: true
+                                }).fail(function() {
+
+                                }).always(function() {
+                                    $("#new-session-start").removeClass("loading");
+                                });
+                            } else {
+                                alert("Number of participants must be greater than zero.");
+                                $("#new-session-start").removeClass("loading");
+                            }
+                        } else {
+                            alert("Number of participants must be an integer.");
+                            $("#new-session-start").removeClass("loading");
+                        }
+                    } else {
+                        alert("Number of participants must be an integer.");
+                        $("#new-session-start").removeClass("loading");
+                    }
+                } else {
+                    alert("Please provide number of participants.");
                     $("#new-session-start").removeClass("loading");
-                });
+                }
             };
 
             return {
