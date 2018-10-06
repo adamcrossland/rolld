@@ -12,6 +12,10 @@
         #sessionID {
             font-weight: bold;
         }
+
+        .panel-body {
+            min-height: 300px;
+        }
     </style>
 </head>
 <body>
@@ -71,7 +75,7 @@
                         <input class="form-input connected-only" type="text" id="name"
                             placeholder="Name" />
                             <br/>
-                        <button class="btn connected-only">Connect</button>
+                        <button id="new-connection-start" class="btn connected-only">Connect</button>
                     </div>
                 </div>
             </div>
@@ -90,7 +94,7 @@
                                 <div class="panel-title">Rolls</div>
                             </div>
                             <div class="panel-body">
-                                <div class="empty">
+                                <div id="rolls-empty" class="empty">
                                     <div class="empty-icon">
                                         <i class="icon icon-upload"></i>
                                     </div>
@@ -101,20 +105,23 @@
                                         to a Rolld server.
                                     </div>
                                 </div>
+                                <div id="rolls-messages">
+                                </div>
                             </div>
-                            <div class="panel-footer" style="visibility: hidden">
+                            <div class="panel-footer">
                                 <!-- buttons or inputs -->
                                 <input type="text" id="commands" placeholder="Roll here" />
                             </div>
                         </div>
                     </div>
                     <div class="column col-3">
-                        <div class="panel" style="visibility: hidden">
+                        <div class="panel">
                             <div class="panel-header">
                                 <div class="panel-title">Info</div>
                             </div>
                             <div class="panel-body">
-                                <div class="empty"></div>
+                                <div id="info-empty" class="empty"></div>
+                                <div id="info-messages"></div>
                             </div>
                             <div class="panel-footer">
                                 <button class="btn btn-primary">Quit</button>
@@ -126,6 +133,41 @@
         </div>
     </div>
     <script>
+        // https://johnresig.com/blog/javascript-micro-templating/
+        (function(){
+            var cache = {};
+            
+            this.tmpl = function tmpl(str, data){
+                // Figure out if we're getting a template, or if we need to
+                // load the template - and be sure to cache the result.
+                var fn = !/\W/.test(str) ?
+                cache[str] = cache[str] ||
+                    tmpl(document.getElementById(str).innerHTML) :
+                
+                // Generate a reusable function that will serve as a template
+                // generator (and which will be cached).
+                new Function("obj",
+                    "var p=[],print=function(){p.push.apply(p,arguments);};" +
+                    
+                    // Introduce the data as local variables using with(){}
+                    "with(obj){p.push('" +
+                    
+                    // Convert the template into pure JavaScript
+                    str
+                    .replace(/[\r\t\n]/g, " ")
+                    .split("<%").join("\t")
+                    .replace(/((^|%>)[^\t]*)'/g, "$1\r")
+                    .replace(/\t=(.*?)%>/g, "',$1,'")
+                    .split("\t").join("');")
+                    .split("%>").join("p.push('")
+                    .split("\r").join("\\'")
+                + "');}return p.join('');");
+                
+                // Provide some basic currying to the user
+                return data ? fn( data ) : fn;
+            };
+        })();
+
         rolld = {};
         rolld.server = (function() {
             let serverAddr = "";
@@ -208,9 +250,52 @@
                 }
             };
 
+            let connectSuccess = function(data) {
+                if (data.trim() != "") {
+                    connectionToken = data;
+
+                    $("#info-empty").hide();
+                    $("#rolls-empty").hide();
+                    $("#info-messages").show();
+                    $("#rolls-messages").show();
+
+                } else {
+                    alert("Could not connect. Please try again later?");
+                }
+            }; 
+
+            let startNewConnection = function() {
+                let sessionID = $("#sessionid").val().trim();
+
+                if (sessionID != "") {
+                    let sessionName = $("#name").val().trim();
+                    if (sessionName != "") {
+                        let address = "/connect/" + sessionID + "/" + escape(sessionName);
+
+                        jQuery.get({
+                            url: address,
+                            success: connectSuccess,
+                            dataType: "text",
+                            crossDomain: true
+                        }).fail(function() {
+                            connectSuccess("");
+                        }).always(function() {
+                            $("#new-connection-start").removeClass("loading");
+                        });
+                    } else {
+                        alert("Please enter a name to connect.");
+                        $("#new-connection-start").removeClass("loading");
+                    }
+                } else {
+                    alert("Please enter a Session ID to connect.");
+                    $("#new-connection-start").removeClass("loading");
+                }
+            }
+
             return {
                 testServerAddress: testServerAddress,
-                startNewSession: startNewSession
+                startNewSession: startNewSession,
+                startNewConnection: startNewConnection
             }
         }());
 
@@ -227,11 +312,19 @@
                 rolld.server.startNewSession();
             });
 
+            $("#new-connection-start").click(function(e) {
+                e.preventDefault();
+                $("#new-connection-start").addClass("loading");
+                rolld.server.startNewConnection();
+            });
+
             $("#rolldaddress").val(location.host);
             $("#server-address-tested").hide();
             $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
             $(".connected-only").prop("disabled", true);
             $("#startResults").hide();
+            $("#info-messages").hide();
+            $("#rolls-messages").hide();
         });
     </script>
 </body>
