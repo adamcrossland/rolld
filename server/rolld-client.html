@@ -16,6 +16,10 @@
         .panel-body {
             min-height: 300px;
         }
+
+        .rolls-panel {
+            max-height: 425px;
+        }
     </style>
 </head>
 <body>
@@ -89,7 +93,7 @@
             <div class="accordion-body col-12">
                 <div class="columns">
                     <div class="column col-3">
-                        <div class="panel">
+                        <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Rolls</div>
                             </div>
@@ -115,7 +119,7 @@
                         </div>
                     </div>
                     <div class="column col-3">
-                        <div class="panel">
+                        <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Info</div>
                             </div>
@@ -330,8 +334,9 @@
         rolld.client = (function() {
             let messageArea = $("#rolls-messages");
             let genericMessage = function(message) {
-                var foo = tmpl($("#genericMessageTemplate").html(), {message: message});
-                messageArea.append(foo);
+                var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
+                messageArea.append(addedMessage);
+                messageArea.parent().scrollTop(messageArea.parent().prop("scrollHeight"))
             };
 
             return {
