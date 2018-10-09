@@ -66,7 +66,15 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 			messType, message, err := newConn.Connection.ReadMessage()
 
 			if err != nil {
-				log.Printf("error while reading websocket: %v", err)
+				if strings.HasPrefix(err.Error(), "close") {
+					// Client has closed the connection
+					stillTicking = false
+					delete(session.Connections, id)
+					session.Commands <- fmt.Sprintf("quit %s", name)
+					continue
+				} else {
+					log.Printf("error while reading websocket: %v", err)
+				}
 			}
 
 			convertedMessage := string(message)
@@ -80,8 +88,8 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 			case "quit":
 				newConn.Connection.WriteMessage(messType, []byte("bye"))
 				newConn.Connection.Close()
-				session.Commands <- fmt.Sprintf("quit %s", name)
 				delete(session.Connections, id)
+				session.Commands <- newConn.SendCommand([]string{"quit", name})
 				stillTicking = false
 			default:
 				// All other messages are handled by the shared command
