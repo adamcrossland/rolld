@@ -171,6 +171,8 @@
             let sessionToken = "";
             let connectionToken = "";
             let name = "";
+            let messageSocket = null;
+            let messageSocketReady = false;
 
             let testSuccess = function(data) {
                 if (data = "rolld ack") {
@@ -247,6 +249,15 @@
                 }
             };
 
+            let messageSocketConnected = function() {
+                rolld.client.genericMessage("Connected and ready to roll!");
+                messageSocketReady = true;
+            }
+
+            let messageSocketMessage = function(e) {
+                rolld.client.genericMessage(e.data)
+            }
+
             let connectSuccess = function(data) {
                 if (data.trim() != "") {
                     connectionToken = data;
@@ -256,11 +267,29 @@
                     $("#info-messages").show();
                     $("#rolls-messages").show();
                     $('input:radio[name=accordion-radio]:nth(1)').prop('checked',true);
-                    rolld.client.genericMessage("Connected and ready to roll!");
+
+                    let wsAddr = "ws://" + location.host + "/messages/" + sessionToken + "/" + connectionToken;
+                    messageSocket = new WebSocket(wsAddr);
+                    messageSocket.onopen = messageSocketConnected;
+                    messageSocket.onmessage = messageSocketMessage;
                 } else {
                     alert("Could not connect. Please try again later?");
                 }
             }; 
+
+            let messageQueue = [];
+
+            let sendMessage = function(message) {
+                if (messageSocketReady) {
+                    while (messageQueue.length > 0) {
+                        messageSocket.send(messageQueue.shift());
+                    }
+
+                    messageSocket.send(message);
+                } else {
+                    messageQueue.push(message);
+                }
+            }
 
             let startNewConnection = function() {
                 let sessionID = $("#sessionid").val().trim();
@@ -293,7 +322,8 @@
             return {
                 testServerAddress: testServerAddress,
                 startNewSession: startNewSession,
-                startNewConnection: startNewConnection
+                startNewConnection: startNewConnection,
+                sendMessage: sendMessage
             }
         }());
 
@@ -326,6 +356,17 @@
                 e.preventDefault();
                 $("#new-connection-start").addClass("loading");
                 rolld.server.startNewConnection();
+            });
+
+            $("#commands").keydown(function(e) {
+                if (e.keyCode === 13) {
+                    e.preventDefault();
+                    let cmd = $("#commands").val();
+                    rolld.client.genericMessage("> " + cmd);
+                    rolld.server.sendMessage(cmd);
+
+                    $("#commands").val("");
+                }
             });
 
             $("#rolldaddress").val(location.host);

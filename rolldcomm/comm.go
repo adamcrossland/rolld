@@ -3,6 +3,7 @@ package rolldcomm
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/adamcrossland/rolld/roller"
@@ -27,6 +28,8 @@ func NewCommSession(id string) *CommSession {
 	newSess.Connections = make(map[string]*ConnectionInfo)
 	newSess.Commands = make(chan string, 100)
 
+	go SharedProcessor(newSess)
+
 	return newSess
 }
 
@@ -38,38 +41,53 @@ func (session CommSession) BroadcastMessage(message string) {
 	}
 }
 
-func (session CommSession) AddConnection(id string, name string, conn *websocket.Conn) {
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+}
+
+func (session CommSession) AddConnection(id string, name string, w http.ResponseWriter, r *http.Request) {
 	newConn := new(ConnectionInfo)
 	newConn.ID = id
 	newConn.Name = name
-	newConn.Connection = conn
+	var upgradeErr error
+	newConn.Connection, upgradeErr = upgrader.Upgrade(w, r, nil)
+
+	if upgradeErr != nil {
+		log.Fatalf("Error upgrading connection to websocket: %v\n", upgradeErr)
+	}
 
 	session.Connections[id] = newConn
 
 	go func() {
-		messType, message, err := conn.ReadMessage()
+		stillTicking := true
 
-		if err != nil {
-			log.Printf("error while reading websocket: %v", err)
-		}
+		for stillTicking {
+			messType, message, err := newConn.Connection.ReadMessage()
 
-		convertedMessage := string(message)
-		convertedMessage = strings.ToLower(convertedMessage)
+			if err != nil {
+				log.Printf("error while reading websocket: %v", err)
+			}
 
-		messageParts := strings.Split(convertedMessage, " ")
+			convertedMessage := string(message)
+			convertedMessage = strings.ToLower(convertedMessage)
 
-		switch messageParts[0] {
-		case "hello":
-			conn.WriteMessage(messType, []byte("ack"))
-		case "quit":
-			conn.WriteMessage(messType, []byte("bye"))
-			conn.Close()
-			session.Commands <- fmt.Sprintf("quit %s", name)
-			delete(session.Connections, id)
-		default:
-			// All other messages are handled by the shared command
-			// processor.
-			session.Commands <- newConn.SendCommand(messageParts[1:])
+			messageParts := strings.Split(convertedMessage, " ")
+
+			switch messageParts[0] {
+			case "hello":
+				newConn.Connection.WriteMessage(messType, []byte("ack"))
+			case "quit":
+				newConn.Connection.WriteMessage(messType, []byte("bye"))
+				newConn.Connection.Close()
+				session.Commands <- fmt.Sprintf("quit %s", name)
+				delete(session.Connections, id)
+				stillTicking = false
+			default:
+				// All other messages are handled by the shared command
+				// processor.
+				session.Commands <- newConn.SendCommand(messageParts)
+			}
 		}
 	}()
 }
@@ -83,8 +101,11 @@ func (conn ConnectionInfo) SendCommand(commandParts []string) string {
 func SharedProcessor(session *CommSession) {
 	stillTicking := true
 
+	log.Printf("Shared processor started for session %s\n", session.ID)
+
 	for stillTicking {
 		nextMessage := <-session.Commands
+		log.Printf("Received command: %s\n", nextMessage)
 		commandParts := strings.Split(nextMessage, " ")
 
 		issuer := commandParts[0]
