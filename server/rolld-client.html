@@ -272,6 +272,12 @@
                     $("#rolls-messages").show();
                     $('input:radio[name=accordion-radio]:nth(1)').prop('checked',true);
 
+                    if (sessionToken === "") {
+                        // Need to copy the session field value in to the sessionToken
+                        // variable.
+                        sessionToken = $("#sessionid").val().trim();
+                    }
+                    
                     let wsAddr = "ws://" + location.host + "/messages/" + sessionToken + "/" + connectionToken;
                     messageSocket = new WebSocket(wsAddr);
                     messageSocket.onopen = messageSocketConnected;
