@@ -58,6 +58,8 @@ func main() {
 	}
 	fmt.Printf("Listening on %s\n", servingAddress)
 
+	sessionLock = new(sync.Mutex)
+
 	http.ListenAndServe(servingAddress, nil)
 }
 
@@ -150,7 +152,7 @@ func messages(w http.ResponseWriter, r *http.Request) {
 	}
 	sessionLock.Unlock()
 
-	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, nil)
+	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, w, r)
 }
 
 func hello(w http.ResponseWriter, r *http.Request) {
