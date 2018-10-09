@@ -59,6 +59,8 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 
 	session.Connections[id] = newConn
 
+	session.Commands <- newConn.SendCommand([]string{"add", name})
+
 	go func() {
 		stillTicking := true
 
@@ -143,6 +145,10 @@ func sharedProcessor(session *CommSession) {
 		case "quit":
 			byeMessage := fmt.Sprintf("%s has left", data)
 			session.BroadcastMessage(byeMessage)
+
+		case "add":
+			joinMessage := fmt.Sprintf("%s has joined.", data)
+			session.BroadcastMessage(joinMessage)
 
 		default:
 			errMessage := fmt.Sprintf("command not understood: %s", command)
