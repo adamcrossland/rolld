@@ -84,7 +84,7 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 
 			switch messageParts[0] {
 			case "hello":
-				newConn.Connection.WriteMessage(messType, []byte("ack"))
+				newConn.Connection.WriteMessage(messType, []byte("Hello from rolld."))
 			case "quit":
 				newConn.Connection.WriteMessage(messType, []byte("bye"))
 				newConn.Connection.Close()
