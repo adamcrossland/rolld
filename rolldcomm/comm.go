@@ -28,7 +28,7 @@ func NewCommSession(id string) *CommSession {
 	newSess.Connections = make(map[string]*ConnectionInfo)
 	newSess.Commands = make(chan string, 100)
 
-	go SharedProcessor(newSess)
+	go sharedProcessor(newSess)
 
 	return newSess
 }
@@ -98,7 +98,7 @@ func (conn ConnectionInfo) SendCommand(commandParts []string) string {
 	return strings.Join(allParts, " ")
 }
 
-func SharedProcessor(session *CommSession) {
+func sharedProcessor(session *CommSession) {
 	stillTicking := true
 
 	log.Printf("Shared processor started for session %s\n", session.ID)
@@ -110,7 +110,10 @@ func SharedProcessor(session *CommSession) {
 
 		issuer := commandParts[0]
 		command := commandParts[1]
-		data := commandParts[2]
+		data := ""
+		if len(commandParts) == 3 {
+			data = commandParts[2]
+		}
 
 		switch command {
 		case "roll":
@@ -122,7 +125,10 @@ func SharedProcessor(session *CommSession) {
 			}
 
 			rollResults := roller.DoRolls(*spec)
-			rollMessage := fmt.Sprintf("%s rolled %s: %d", session.Connections[issuer].Name, data, rollResults.Count)
+			rollMessage := fmt.Sprintf("%s rolled %s: ", session.Connections[issuer].Name, data)
+			for rollI := 0; rollI < rollResults.Count; rollI++ {
+				rollMessage += fmt.Sprintf("%d ", rollResults.Rolls[rollI].Total)
+			}
 
 			session.BroadcastMessage(rollMessage)
 
