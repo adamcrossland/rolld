@@ -101,6 +101,9 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 				delete(session.Connections, id)
 				session.Commands <- newConn.sendCommand([]string{"quit", name})
 				stillTicking = false
+			case "add":
+				// This is not an allowed command. Just eat it.
+
 			default:
 				// All other messages are handled by the shared command
 				// processor.
@@ -158,8 +161,8 @@ func sharedProcessor(session *CommSession) {
 		case "add":
 			session.members = ""
 			joinMessage := fmt.Sprintf("%s has joined.", data)
-			fmt.Printf("%s has joined", data)
 			session.broadcastMessage(joinMessage)
+			fallthrough
 
 		case "members":
 			if session.members == "" {
