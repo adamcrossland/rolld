@@ -20,6 +20,16 @@
         .rolls-panel {
             max-height: 425px;
         }
+
+        .members-header {
+            font-weight: bold;
+        }
+        
+        .member {
+            text-indent: .5em;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -125,6 +135,7 @@
                             </div>
                             <div class="panel-body">
                                 <div id="info-empty" class="empty"></div>
+                                <div id="members"></div>
                                 <div id="info-messages"></div>
                             </div>
                             <div class="panel-footer">
@@ -138,6 +149,12 @@
     </div>
     <script type="text/html" id="genericMessageTemplate">
         <div><p><#= message #><p></div>
+    </script>
+    <script type="text/html" id="membersTemplate">
+        <div class="members_header">Members</div>
+        <# for (let i = 0; i < members.length; i++) { #>
+            <div class="member"><#= members[i] #></div>
+        <# } #>
     </script>
     <script>
         https://weblog.west-wind.com/posts/2008/Oct/13/Client-Templating-with-jQuery
@@ -259,7 +276,17 @@
             }
 
             let messageSocketMessage = function(e) {
-                rolld.client.genericMessage(e.data)
+                let messageParts = e.data.split("\n");
+                switch (messageParts[0]) {
+                    case "members":
+                        messageParts.shift();
+                        rolld.client.updateMembers(messageParts);
+                        break;
+                    default:
+                        rolld.client.genericMessage(e.data);
+                        break;
+                }
+                
             }
 
             let connectSuccess = function(data) {
@@ -339,14 +366,22 @@
 
         rolld.client = (function() {
             let messageArea = $("#rolls-messages");
+            let membersArea = $("#members");
+
             let genericMessage = function(message) {
                 var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
                 messageArea.append(addedMessage);
                 messageArea.parent().scrollTop(messageArea.parent().prop("scrollHeight"))
             };
 
+            let updateMembers = function(members) {
+                let memberText = tmpl($("#membersTemplate").html(), {members: members});
+                membersArea.html(memberText);
+            }
+
             return {
-                genericMessage: genericMessage
+                genericMessage: genericMessage,
+                updateMembers: updateMembers
             };
         }());
 
