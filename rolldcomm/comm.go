@@ -10,18 +10,23 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// ConnectionInfo comprises information about an individual participant
+// in a Session
 type ConnectionInfo struct {
 	ID         string
 	Name       string
 	Connection *websocket.Conn
 }
 
+// CommSession is all of the information about a Session
 type CommSession struct {
 	ID          string
 	Connections map[string]*ConnectionInfo
 	Commands    chan string
 }
 
+// NewCommSession create a CommSession object that encapsulates all of the
+// information that is unique to and required for a Session.
 func NewCommSession(id string) *CommSession {
 	newSess := new(CommSession)
 	newSess.ID = id
@@ -33,7 +38,7 @@ func NewCommSession(id string) *CommSession {
 	return newSess
 }
 
-func (session CommSession) BroadcastMessage(message string) {
+func (session CommSession) broadcastMessage(message string) {
 	messageAsBytes := []byte(message)
 
 	for _, eachConn := range session.Connections {
@@ -46,6 +51,8 @@ var upgrader = websocket.Upgrader{
 	WriteBufferSize: 1024,
 }
 
+// AddConnection adds a participant information to the Session's CommSession once
+// they are ready to switch to WebSockets and begin communication.
 func (session CommSession) AddConnection(id string, name string, w http.ResponseWriter, r *http.Request) {
 	newConn := new(ConnectionInfo)
 	newConn.ID = id
@@ -59,7 +66,7 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 
 	session.Connections[id] = newConn
 
-	session.Commands <- newConn.SendCommand([]string{"add", name})
+	session.Commands <- newConn.sendCommand([]string{"add", name})
 
 	go func() {
 		stillTicking := true
@@ -91,18 +98,18 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 				newConn.Connection.WriteMessage(messType, []byte("bye"))
 				newConn.Connection.Close()
 				delete(session.Connections, id)
-				session.Commands <- newConn.SendCommand([]string{"quit", name})
+				session.Commands <- newConn.sendCommand([]string{"quit", name})
 				stillTicking = false
 			default:
 				// All other messages are handled by the shared command
 				// processor.
-				session.Commands <- newConn.SendCommand(messageParts)
+				session.Commands <- newConn.sendCommand(messageParts)
 			}
 		}
 	}()
 }
 
-func (conn ConnectionInfo) SendCommand(commandParts []string) string {
+func (conn ConnectionInfo) sendCommand(commandParts []string) string {
 	// Prepend the connection ID
 	allParts := append([]string{conn.ID}, commandParts...)
 	return strings.Join(allParts, " ")
@@ -140,15 +147,15 @@ func sharedProcessor(session *CommSession) {
 				rollMessage += fmt.Sprintf("%d ", rollResults.Rolls[rollI].Total)
 			}
 
-			session.BroadcastMessage(rollMessage)
+			session.broadcastMessage(rollMessage)
 
 		case "quit":
 			byeMessage := fmt.Sprintf("%s has left", data)
-			session.BroadcastMessage(byeMessage)
+			session.broadcastMessage(byeMessage)
 
 		case "add":
 			joinMessage := fmt.Sprintf("%s has joined.", data)
-			session.BroadcastMessage(joinMessage)
+			session.broadcastMessage(joinMessage)
 
 		default:
 			errMessage := fmt.Sprintf("command not understood: %s", command)
