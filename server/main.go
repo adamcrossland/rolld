@@ -50,6 +50,7 @@ func main() {
 	r.HandleFunc("/messages/{session}/{connection}", messages)
 	r.HandleFunc("/hello", hello)
 	r.HandleFunc("/client", client)
+	r.HandleFunc("/", client)
 	http.Handle("/", r)
 
 	servingAddress := os.Getenv("ROLLD_SERVER_ADDRESS")
