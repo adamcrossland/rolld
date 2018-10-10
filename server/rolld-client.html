@@ -139,7 +139,23 @@
                                 <div id="info-messages"></div>
                             </div>
                             <div class="panel-footer">
-                                <button class="btn btn-primary">Quit</button>
+                                <button id="quit-button" class="btn btn-primary">Quit</button>
+                            </div>
+                            <div class="modal modal-sm" id="quit-confirm">
+                                <a href="#close" class="modal-overlay" aria-label="Close"></a>
+                                <div class="modal-container">
+                                    <div class="modal-header">
+                                        <a href="#close" class="btn btn-clear float-right quit-no" aria-label="Close"></a>
+                                        <div class="modal-title h5">Confirm Quit</div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="content">
+                                            <h5>Are you sure that you want to quit?</h5>
+                                            <button id="quit-yes-button" class="btn btn-primary">Yes</button>
+                                            <button id="" class="btn quit-no">No</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -356,11 +372,16 @@
                 }
             }
 
+            let sendQuit = function() {
+                sendMessage("quit");
+            }
+
             return {
                 testServerAddress: testServerAddress,
                 startNewSession: startNewSession,
                 startNewConnection: startNewConnection,
-                sendMessage: sendMessage
+                sendMessage: sendMessage,
+                quit: sendQuit
             }
         }());
 
@@ -379,9 +400,14 @@
                 membersArea.html(memberText);
             }
 
+            let quit = function() {
+                rolld.server.quit();
+            };
+
             return {
                 genericMessage: genericMessage,
-                updateMembers: updateMembers
+                updateMembers: updateMembers,
+                quit: quit
             };
         }());
 
@@ -413,6 +439,22 @@
 
                     $("#commands").val("");
                 }
+            });
+
+            $("#quit-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").addClass("active");
+            });
+
+            $("#quit-yes-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
+                rolld.client.quit();
+            });
+
+            $(".quit-no").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
             });
 
             $("#rolldaddress").val(location.host);
