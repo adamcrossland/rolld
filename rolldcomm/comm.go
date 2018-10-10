@@ -76,7 +76,7 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 			messType, message, err := newConn.Connection.ReadMessage()
 
 			if err != nil {
-				if strings.HasPrefix(err.Error(), "close") {
+				if strings.HasPrefix(err.Error(), "websocket: close") {
 					// Client has closed the connection
 					stillTicking = false
 					delete(session.Connections, id)
