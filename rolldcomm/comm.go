@@ -157,12 +157,13 @@ func sharedProcessor(session *CommSession) {
 			session.members = ""
 			byeMessage := fmt.Sprintf("%s has left", data)
 			session.broadcastMessage(byeMessage)
+			session.Commands <- "0 members" // Force a members update
 
 		case "add":
 			session.members = ""
 			joinMessage := fmt.Sprintf("%s has joined.", data)
 			session.broadcastMessage(joinMessage)
-			fallthrough
+			session.Commands <- "0 members" // Force a members update
 
 		case "members":
 			if session.members == "" {
