@@ -80,7 +80,7 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 					// Client has closed the connection
 					stillTicking = false
 					delete(session.Connections, id)
-					session.Commands <- fmt.Sprintf("quit %s", name)
+					session.Commands <- fmt.Sprintf("%s quit %s", id, name)
 					continue
 				} else {
 					log.Printf("error while reading websocket: %v", err)
