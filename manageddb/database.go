@@ -32,7 +32,7 @@ func NewManagedDB(dbPath string, driver string) *ManagedDB {
 
 	// Figure out what the current migration is
 	newDB.currentMigration = newDB.getCurrentMigration()
-	log.Printf("current migration level: %d", newDB.currentMigration)
+	log.Printf("Current migration level: %d.", newDB.currentMigration)
 	newDB.migrations = map[int]dbMigration{
 		1: dbMigration{up: migration1up, down: migration1down},
 		2: dbMigration{up: migration2up, down: migration2down},
@@ -99,6 +99,10 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 				mdb.setCurrentMigration(mdb.currentMigration)
 			}
 		}
+
+		log.Printf("Migrated up to level %d.", mdb.currentMigration)
+	} else {
+		log.Printf("No migrations to perform.")
 	}
 }
 

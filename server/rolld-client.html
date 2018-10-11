@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Rolld Client</title>
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/spectre.css/dist/spectre-icons.min.css">
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <style>
+        #sessionID {
+            font-weight: bold;
+        }
+
+        .panel-body {
+            min-height: 300px;
+        }
+
+        .rolls-panel {
+            max-height: 425px;
+        }
+
+        .members-header {
+            font-weight: bold;
+        }
+        
+        .member {
+            text-indent: .5em;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+    <div class="container" style="margin: 2em">
+        <div class="columns" style="margin-bottom: 1em">
+            <div class="col-3">
+                <h1>Rolld Client</h1>
+            </div>
+            <div class="divider-vert"></div>
+            <div class="col-3">
+                <h5>A simple, sample client for Rolld</h5>
+                <p>
+                    The Rolld server is a tool to assist with playing
+                    fantasy role-playing games over the Internet. It rolls 
+                    dice in a secure fashion that everyone can see and share.
+                </p>
+            </div>
+        </div>
+        <div class="accordion">
+            <input type="radio" id="accordion-1" name="accordion-radio" hidden checked="true">
+            <label class="accordion-header" for="accordion-1">
+                <i class="icon icon-arrow-right mr-1"></i>
+                <b>Connect</b>
+            </label>
+            <div class="accordion-body col-12">
+                <div class="columns" style="margin-bottom: 1em; margin-left: 0em">
+                    <div class="input-group has-icon-left">
+                            <input class="form-input" type="text" id="rolldaddress"
+                                   placeholder="Rolld server address"/>
+                            <i id="server-address-tested" class="form-icon icon icon-check" style="color: green"></i>
+                        <button class="btn btn-primary input-group-btn" id="server-address-test">Test</button>
+                    </div>
+                </div>
+                <div class="columns">
+                    <div class="column col-3" style="border-width: 1px; margin-right: .5em">
+                        <h4>Start a new session</h4>
+                        <label class="form-label" for="new-session-count">Participants</label>
+                        <input class="form-input connected-only" type="number" id="start-count"
+                                placeholder="# of participants" />
+                        <br/>
+                        <button id="new-session-start" class="btn connected-only">Start</button>
+                        <div id="startResults">
+                                <p>
+                                The ID for your new session is
+                                <span id="session-id-share"></span>.
+                                Give it to the other players.
+                                </p>
+                        </div>
+                    </div>
+                    <div class="divider-vert" data-content="OR"></div>
+                    <div class="column col-3" style="border-width: 1px; margin-left: .5em">
+                        <h4>Use an existing session</h4>
+                        <label class="form-label" for="sessionid">Session</label>
+                        <input class="form-input connected-only" type="text" id="sessionid"
+                            placeholder="Session ID" />
+                        <label class="form-label" for="name">Name</label>
+                        <input class="form-input connected-only" type="text" id="name"
+                            placeholder="Name" />
+                            <br/>
+                        <button id="new-connection-start" class="btn connected-only">Connect</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="accordion">
+            <input type="radio" id="accordion-2" name="accordion-radio" hidden checked="false" >
+            <label class="accordion-header" for="accordion-2">
+                <i class="icon icon-arrow-right mr-1"></i>
+                <b>Roll</b>
+            </label>
+            <div class="accordion-body col-12">
+                <div class="columns">
+                    <div class="column col-3">
+                        <div class="panel rolls-panel">
+                            <div class="panel-header">
+                                <div class="panel-title">Rolls</div>
+                            </div>
+                            <div class="panel-body">
+                                <div id="rolls-empty" class="empty">
+                                    <div class="empty-icon">
+                                        <i class="icon icon-upload"></i>
+                                    </div>
+                                    <p class="empty-title h5">Not connected</p>
+                                    <p class="empty-subtitle">You are not connected to a Rolld server.</p>
+                                    <div class="empty-action">
+                                        Use the <b>Connect</b> area above to make a connection
+                                        to a Rolld server.
+                                    </div>
+                                </div>
+                                <div id="rolls-messages">
+                                </div>
+                            </div>
+                            <div class="panel-footer">
+                                <!-- buttons or inputs -->
+                                <input type="text" id="commands" placeholder="Roll here" />
+                            </div>
+                        </div>
+                    </div>
+                    <div class="column col-3">
+                        <div class="panel rolls-panel">
+                            <div class="panel-header">
+                                <div class="panel-title">Info</div>
+                            </div>
+                            <div class="panel-body">
+                                <div id="info-empty" class="empty"></div>
+                                <div id="members"></div>
+                                <div id="info-messages"></div>
+                            </div>
+                            <div class="panel-footer">
+                                <button id="quit-button" class="btn btn-primary">Quit</button>
+                            </div>
+                            <div class="modal modal-sm" id="quit-confirm">
+                                <a href="#close" class="modal-overlay" aria-label="Close"></a>
+                                <div class="modal-container">
+                                    <div class="modal-header">
+                                        <a href="#close" class="btn btn-clear float-right quit-no" aria-label="Close"></a>
+                                        <div class="modal-title h5">Confirm Quit</div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="content">
+                                            <h5>Are you sure that you want to quit?</h5>
+                                            <button id="quit-yes-button" class="btn btn-primary">Yes</button>
+                                            <button id="" class="btn quit-no">No</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script type="text/html" id="genericMessageTemplate">
+        <div><p><#= message #><p></div>
+    </script>
+    <script type="text/html" id="membersTemplate">
+        <div class="members-header">Members</div>
+        <# for (let i = 0; i < members.length; i++) { #>
+            <div class="member"><#= members[i] #></div>
+        <# } #>
+    </script>
+    <script>
+        https://weblog.west-wind.com/posts/2008/Oct/13/Client-Templating-with-jQuery
+        (function() {
+            var _tmplCache = {}
+            this.tmpl = function(str, data) {
+                var err = "";
+                try {
+                    var func = _tmplCache[str];
+                    if (!func) {
+                        var strFunc =
+                        "var p=[],print=function(){p.push.apply(p,arguments);};" +
+                                    "with(obj){p.push('" +
+                        str.replace(/[\r\t\n]/g, " ")
+                        .replace(/'(?=[^#]*#>)/g, "\t")
+                        .split("'").join("\\'")
+                        .split("\t").join("'")
+                        .replace(/<#=(.+?)#>/g, "',$1,'")
+                        .split("<#").join("');")
+                        .split("#>").join("p.push('")
+                        + "');}return p.join('');";
+
+                        func = new Function("obj", strFunc);
+                        _tmplCache[str] = func;
+                    }
+                    return func(data);
+                } catch (e) { err = e.message; }
+                return "< # ERROR: " + err.htmlEncode() + " # >";
+            }
+        }());
+
+        rolld = {};
+        rolld.server = (function() {
+            let serverAddr = "";
+            let sessionToken = "";
+            let connectionToken = "";
+            let name = "";
+            let messageSocket = null;
+            let messageSocketReady = false;
+
+            let testSuccess = function(data) {
+                if (data = "rolld ack") {
+                    $("#server-address-tested").show();
+                    serverAddr = $("#rolldaddress").val();
+                    $(".connected-only").prop("disabled", false)
+                } else {
+                    $("#server-address-tested").hide();
+                    serverAddr = "";
+                }
+            };
+
+            let testServerAddress = function() {
+                let address = "/hello";
+
+                jQuery.get({
+                    url: address,
+                    success: testSuccess,
+                    dataType: "text",
+                    crossDomain: true
+                }).fail(function() {
+                    testSuccess("");
+                }).always(function() {
+                    $("#server-address-test").removeClass("loading");
+                });
+            };
+
+            let startSuccess = function(data) {
+                if (data != "") {
+                    sessionToken = data;
+                    $("#session-id-share").text(sessionToken);
+                    $("#startResults").show();
+                    $("#sessionid").val(sessionToken);
+                } else {
+
+                }
+            };
+
+            let startNewSession = function() {
+                let startCount = $("#start-count").val();
+
+                if (startCount != "") {
+                    startCount = Number(startCount);
+                    if (!Number.isNaN(startCount)) {
+                        if (Number.isInteger(startCount)) {
+                            if (startCount > 0) {
+                                let address = "/start/" + startCount;
+
+                                jQuery.get({
+                                    url: address,
+                                    success: startSuccess,
+                                    dataType: "text",
+                                    crossDomain: true
+                                }).fail(function() {
+
+                                }).always(function() {
+                                    $("#new-session-start").removeClass("loading");
+                                });
+                            } else {
+                                alert("Number of participants must be greater than zero.");
+                                $("#new-session-start").removeClass("loading");
+                            }
+                        } else {
+                            alert("Number of participants must be an integer.");
+                            $("#new-session-start").removeClass("loading");
+                        }
+                    } else {
+                        alert("Number of participants must be an integer.");
+                        $("#new-session-start").removeClass("loading");
+                    }
+                } else {
+                    alert("Please provide number of participants.");
+                    $("#new-session-start").removeClass("loading");
+                }
+            };
+
+            let messageSocketConnected = function() {
+                rolld.client.genericMessage("Connected and ready to roll!");
+                messageSocketReady = true;
+            }
+
+            let messageSocketMessage = function(e) {
+                let messageParts = e.data.split("\n");
+                switch (messageParts[0]) {
+                    case "members":
+                        messageParts.shift();
+                        rolld.client.updateMembers(messageParts);
+                        break;
+                    default:
+                        rolld.client.genericMessage(e.data);
+                        break;
+                }
+                
+            }
+
+            let connectSuccess = function(data) {
+                if (data.trim() != "") {
+                    connectionToken = data;
+
+                    $("#info-empty").hide();
+                    $("#rolls-empty").hide();
+                    $("#info-messages").show();
+                    $("#rolls-messages").show();
+                    $('input:radio[name=accordion-radio]:nth(1)').prop('checked',true);
+
+                    if (sessionToken === "") {
+                        // Need to copy the session field value in to the sessionToken
+                        // variable.
+                        sessionToken = $("#sessionid").val().trim();
+                    }
+                    
+                    let wsAddr = "ws://" + location.host + "/messages/" + sessionToken + "/" + connectionToken;
+                    messageSocket = new WebSocket(wsAddr);
+                    messageSocket.onopen = messageSocketConnected;
+                    messageSocket.onmessage = messageSocketMessage;
+                } else {
+                    alert("Could not connect. Please try again later?");
+                }
+            }; 
+
+            let messageQueue = [];
+
+            let sendMessage = function(message) {
+                if (messageSocketReady) {
+                    while (messageQueue.length > 0) {
+                        messageSocket.send(messageQueue.shift());
+                    }
+
+                    messageSocket.send(message);
+                } else {
+                    messageQueue.push(message);
+                }
+            }
+
+            let startNewConnection = function() {
+                let sessionID = $("#sessionid").val().trim();
+
+                if (sessionID != "") {
+                    let sessionName = $("#name").val().trim();
+                    if (sessionName != "") {
+                        let address = "/connect/" + sessionID + "/" + escape(sessionName);
+
+                        jQuery.get({
+                            url: address,
+                            success: connectSuccess,
+                            dataType: "text",
+                            crossDomain: true
+                        }).fail(function() {
+                            connectSuccess("");
+                        }).always(function() {
+                            $("#new-connection-start").removeClass("loading");
+                        });
+                    } else {
+                        alert("Please enter a name to connect.");
+                        $("#new-connection-start").removeClass("loading");
+                    }
+                } else {
+                    alert("Please enter a Session ID to connect.");
+                    $("#new-connection-start").removeClass("loading");
+                }
+            }
+
+            let sendQuit = function() {
+                sendMessage("quit");
+            }
+
+            return {
+                testServerAddress: testServerAddress,
+                startNewSession: startNewSession,
+                startNewConnection: startNewConnection,
+                sendMessage: sendMessage,
+                quit: sendQuit
+            }
+        }());
+
+        rolld.client = (function() {
+            let messageArea = $("#rolls-messages");
+            let membersArea = $("#members");
+
+            let genericMessage = function(message) {
+                var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
+                messageArea.append(addedMessage);
+                messageArea.parent().scrollTop(messageArea.parent().prop("scrollHeight"))
+            };
+
+            let updateMembers = function(members) {
+                let memberText = tmpl($("#membersTemplate").html(), {members: members});
+                membersArea.html(memberText);
+            }
+
+            let quit = function() {
+                rolld.server.quit();
+            };
+
+            return {
+                genericMessage: genericMessage,
+                updateMembers: updateMembers,
+                quit: quit
+            };
+        }());
+
+        $.when($.ready).then(function() {
+            $("#server-address-test").click(function(e) {
+                e.preventDefault();
+                $("#server-address-test").addClass("loading");
+                rolld.server.testServerAddress();
+            });
+
+            $("#new-session-start").click(function(e) {
+                e.preventDefault();
+                $("#new-session-start").addClass("loading");
+                rolld.server.startNewSession();
+            });
+
+            $("#new-connection-start").click(function(e) {
+                e.preventDefault();
+                $("#new-connection-start").addClass("loading");
+                rolld.server.startNewConnection();
+            });
+
+            $("#commands").keydown(function(e) {
+                if (e.keyCode === 13) {
+                    e.preventDefault();
+                    let cmd = $("#commands").val();
+                    rolld.client.genericMessage("> " + cmd);
+                    rolld.server.sendMessage(cmd);
+
+                    $("#commands").val("");
+                }
+            });
+
+            $("#quit-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").addClass("active");
+            });
+
+            $("#quit-yes-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
+                rolld.client.quit();
+            });
+
+            $(".quit-no").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
+            });
+
+            $("#rolldaddress").val(location.host);
+            $("#server-address-tested").hide();
+            $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
+            $(".connected-only").prop("disabled", true);
+            $("#startResults").hide();
+            $("#info-messages").hide();
+            $("#rolls-messages").hide();
+        });
+    </script>
+</body>
+</html>
