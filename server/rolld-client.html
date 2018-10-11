@@ -20,6 +20,16 @@
         .rolls-panel {
             max-height: 425px;
         }
+
+        .members-header {
+            font-weight: bold;
+        }
+        
+        .member {
+            text-indent: .5em;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
     </style>
 </head>
 <body>
@@ -125,10 +135,27 @@
                             </div>
                             <div class="panel-body">
                                 <div id="info-empty" class="empty"></div>
+                                <div id="members"></div>
                                 <div id="info-messages"></div>
                             </div>
                             <div class="panel-footer">
-                                <button class="btn btn-primary">Quit</button>
+                                <button id="quit-button" class="btn btn-primary">Quit</button>
+                            </div>
+                            <div class="modal modal-sm" id="quit-confirm">
+                                <a href="#close" class="modal-overlay" aria-label="Close"></a>
+                                <div class="modal-container">
+                                    <div class="modal-header">
+                                        <a href="#close" class="btn btn-clear float-right quit-no" aria-label="Close"></a>
+                                        <div class="modal-title h5">Confirm Quit</div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="content">
+                                            <h5>Are you sure that you want to quit?</h5>
+                                            <button id="quit-yes-button" class="btn btn-primary">Yes</button>
+                                            <button id="" class="btn quit-no">No</button>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -138,6 +165,12 @@
     </div>
     <script type="text/html" id="genericMessageTemplate">
         <div><p><#= message #><p></div>
+    </script>
+    <script type="text/html" id="membersTemplate">
+        <div class="members-header">Members</div>
+        <# for (let i = 0; i < members.length; i++) { #>
+            <div class="member"><#= members[i] #></div>
+        <# } #>
     </script>
     <script>
         https://weblog.west-wind.com/posts/2008/Oct/13/Client-Templating-with-jQuery
@@ -259,7 +292,17 @@
             }
 
             let messageSocketMessage = function(e) {
-                rolld.client.genericMessage(e.data)
+                let messageParts = e.data.split("\n");
+                switch (messageParts[0]) {
+                    case "members":
+                        messageParts.shift();
+                        rolld.client.updateMembers(messageParts);
+                        break;
+                    default:
+                        rolld.client.genericMessage(e.data);
+                        break;
+                }
+                
             }
 
             let connectSuccess = function(data) {
@@ -329,24 +372,42 @@
                 }
             }
 
+            let sendQuit = function() {
+                sendMessage("quit");
+            }
+
             return {
                 testServerAddress: testServerAddress,
                 startNewSession: startNewSession,
                 startNewConnection: startNewConnection,
-                sendMessage: sendMessage
+                sendMessage: sendMessage,
+                quit: sendQuit
             }
         }());
 
         rolld.client = (function() {
             let messageArea = $("#rolls-messages");
+            let membersArea = $("#members");
+
             let genericMessage = function(message) {
                 var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
                 messageArea.append(addedMessage);
                 messageArea.parent().scrollTop(messageArea.parent().prop("scrollHeight"))
             };
 
+            let updateMembers = function(members) {
+                let memberText = tmpl($("#membersTemplate").html(), {members: members});
+                membersArea.html(memberText);
+            }
+
+            let quit = function() {
+                rolld.server.quit();
+            };
+
             return {
-                genericMessage: genericMessage
+                genericMessage: genericMessage,
+                updateMembers: updateMembers,
+                quit: quit
             };
         }());
 
@@ -378,6 +439,22 @@
 
                     $("#commands").val("");
                 }
+            });
+
+            $("#quit-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").addClass("active");
+            });
+
+            $("#quit-yes-button").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
+                rolld.client.quit();
+            });
+
+            $(".quit-no").click(function(e) {
+                e.preventDefault();
+                $("#quit-confirm").removeClass("active");
             });
 
             $("#rolldaddress").val(location.host);

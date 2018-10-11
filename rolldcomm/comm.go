@@ -23,6 +23,7 @@ type CommSession struct {
 	ID          string
 	Connections map[string]*ConnectionInfo
 	Commands    chan string
+	members     string
 }
 
 // NewCommSession create a CommSession object that encapsulates all of the
@@ -75,7 +76,7 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 			messType, message, err := newConn.Connection.ReadMessage()
 
 			if err != nil {
-				if strings.HasPrefix(err.Error(), "close") {
+				if strings.HasPrefix(err.Error(), "websocket: close") {
 					// Client has closed the connection
 					stillTicking = false
 					delete(session.Connections, id)
@@ -100,6 +101,9 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 				delete(session.Connections, id)
 				session.Commands <- newConn.sendCommand([]string{"quit", name})
 				stillTicking = false
+			case "add":
+				// This is not an allowed command. Just eat it.
+
 			default:
 				// All other messages are handled by the shared command
 				// processor.
@@ -128,8 +132,8 @@ func sharedProcessor(session *CommSession) {
 		issuer := commandParts[0]
 		command := commandParts[1]
 		data := ""
-		if len(commandParts) == 3 {
-			data = commandParts[2]
+		if len(commandParts) >= 3 {
+			data = strings.Join(commandParts[2:], " ")
 		}
 
 		switch command {
@@ -150,17 +154,37 @@ func sharedProcessor(session *CommSession) {
 			session.broadcastMessage(rollMessage)
 
 		case "quit":
+			session.members = ""
 			byeMessage := fmt.Sprintf("%s has left", data)
 			session.broadcastMessage(byeMessage)
+			session.Commands <- "0 members" // Force a members update
 
 		case "add":
+			session.members = ""
 			joinMessage := fmt.Sprintf("%s has joined.", data)
 			session.broadcastMessage(joinMessage)
+			session.Commands <- "0 members" // Force a members update
 
+		case "members":
+			if session.members == "" {
+				session.buildMembersList()
+			}
+
+			session.broadcastMessage(fmt.Sprintf("members\n%s", session.members))
 		default:
 			errMessage := fmt.Sprintf("command not understood: %s", command)
 			errMessageAsBytes := []byte(errMessage)
 			session.Connections[issuer].Connection.WriteMessage(websocket.TextMessage, errMessageAsBytes)
 		}
 	}
+}
+
+func (session *CommSession) buildMembersList() {
+	var tempList strings.Builder
+
+	for _, v := range session.Connections {
+		tempList.WriteString(fmt.Sprintf("%s\n", v.Name))
+	}
+
+	session.members = tempList.String()
 }
