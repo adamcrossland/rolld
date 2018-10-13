@@ -58,7 +58,7 @@
                 <b>Connect</b>
             </label>
             <div class="accordion-body col-12">
-                <div class="columns" style="margin-bottom: 1em; margin-left: 0em">
+                <div id="server-test" class="columns" style="margin-bottom: 1em; margin-left: 0em">
                     <div class="input-group has-icon-left">
                             <input class="form-input" type="text" id="rolldaddress"
                                    placeholder="Rolld server address"/>
@@ -215,13 +215,14 @@
             let messageSocketReady = false;
 
             let testSuccess = function(data) {
-                if (data = "rolld ack") {
+                if (data === "rolld ack") {
                     $("#server-address-tested").show();
                     serverAddr = $("#rolldaddress").val();
                     $(".connected-only").prop("disabled", false)
                 } else {
                     $("#server-address-tested").hide();
                     serverAddr = "";
+                    alert("Could not contact a Rolld server at the given address. Try again.");
                 }
             };
 
@@ -415,12 +416,6 @@
         }());
 
         $.when($.ready).then(function() {
-            $("#server-address-test").click(function(e) {
-                e.preventDefault();
-                $("#server-address-test").addClass("loading");
-                rolld.server.testServerAddress();
-            });
-
             $("#new-session-start").click(function(e) {
                 e.preventDefault();
                 $("#new-session-start").addClass("loading");
@@ -467,6 +462,26 @@
             $("#startResults").hide();
             $("#info-messages").hide();
             $("#rolls-messages").hide();
+
+            if (location.host === "") {
+                // Not served version, enable server test area and behaviors.
+                $("#server-address-test").click(function(e) {
+                    e.preventDefault();
+                    if ($("#rolldaddress").val() === "") {
+                        alert("You must provide a server address to test.");
+                    } else {
+                        $("#server-address-test").addClass("loading");
+                        rolld.server.testServerAddress();
+                    }
+                });
+
+                $("#server-test").show();
+            } else {
+                serverAddr = location.host;
+                $(".connected-only").prop("disabled", false)
+                
+                $("#server-test").hide();
+            }
         });
     </script>
 </body>
