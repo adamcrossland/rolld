@@ -35,11 +35,14 @@
 <body>
     <div class="container" style="margin: 2em">
         <div class="columns" style="margin-bottom: 1em">
-            <div class="col-3">
+            <div class="col-3 hide-sm">
                 <h1>Rolld Client</h1>
             </div>
-            <div class="divider-vert"></div>
-            <div class="col-3">
+            <div class="col-6 show-sm">
+                <h3>Rolld Client</h3>
+            </div>
+            <div class="divider-vert hide-sm "></div>
+            <div class="col-3 hide-sm">
                 <h5>A simple, sample client for Rolld</h5>
                 <p>
                     The Rolld server is a tool to assist with playing
@@ -102,18 +105,18 @@
             </label>
             <div class="accordion-body col-12">
                 <div class="columns">
-                    <div class="column col-3">
+                    <div class="column col-3 col-md-10">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Rolls</div>
                             </div>
                             <div class="panel-body">
                                 <div id="rolls-empty" class="empty">
-                                    <div class="empty-icon">
+                                    <div class="empty-icon hide-sm">
                                         <i class="icon icon-upload"></i>
                                     </div>
                                     <p class="empty-title h5">Not connected</p>
-                                    <p class="empty-subtitle">You are not connected to a Rolld server.</p>
+                                    <p class="empty-subtitle hide-sm">You are not connected to a Rolld server.</p>
                                     <div class="empty-action">
                                         Use the <b>Connect</b> area above to make a connection
                                         to a Rolld server.
@@ -124,11 +127,11 @@
                             </div>
                             <div class="panel-footer">
                                 <!-- buttons or inputs -->
-                                <input type="text" id="commands" placeholder="Roll here" />
+                                <input class="form-input connected-only" type="text" id="commands" placeholder="Roll here" />
                             </div>
                         </div>
                     </div>
-                    <div class="column col-3">
+                    <div class="column col-3 hide-sm">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Info</div>
