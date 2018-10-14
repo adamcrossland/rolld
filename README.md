@@ -5,7 +5,7 @@ This is a little project that I put together in my spare time to learn about Web
 Go skills, which hadn't gotten much use in a little while.
 
 This is open source, of course, and any one is free to build and spin up their own copy of the server, but for demonstration
-purposes and testing, there is an up-to-date build running at http://rolld.net. If you are a frsutrated fan of FRPGs who just
+purposes and testing, there is an up-to-date build running at https://rolld.net. If you are a frsutrated fan of FRPGs who just
 can't seem to get the gang together in one place at the same time, try it out as a tool for handling die rolling fairly and
 transparently.
 
