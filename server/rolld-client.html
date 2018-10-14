@@ -35,11 +35,14 @@
 <body>
     <div class="container" style="margin: 2em">
         <div class="columns" style="margin-bottom: 1em">
-            <div class="col-3">
+            <div class="col-3 hide-sm">
                 <h1>Rolld Client</h1>
             </div>
-            <div class="divider-vert"></div>
-            <div class="col-3">
+            <div class="col-6 show-sm">
+                <h3>Rolld Client</h3>
+            </div>
+            <div class="divider-vert hide-sm "></div>
+            <div class="col-3 hide-sm">
                 <h5>A simple, sample client for Rolld</h5>
                 <p>
                     The Rolld server is a tool to assist with playing
@@ -55,7 +58,7 @@
                 <b>Connect</b>
             </label>
             <div class="accordion-body col-12">
-                <div class="columns" style="margin-bottom: 1em; margin-left: 0em">
+                <div id="server-test" class="columns" style="margin-bottom: 1em; margin-left: 0em">
                     <div class="input-group has-icon-left">
                             <input class="form-input" type="text" id="rolldaddress"
                                    placeholder="Rolld server address"/>
@@ -102,18 +105,18 @@
             </label>
             <div class="accordion-body col-12">
                 <div class="columns">
-                    <div class="column col-3">
+                    <div class="column col-3 col-md-10">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Rolls</div>
                             </div>
                             <div class="panel-body">
                                 <div id="rolls-empty" class="empty">
-                                    <div class="empty-icon">
+                                    <div class="empty-icon hide-sm">
                                         <i class="icon icon-upload"></i>
                                     </div>
                                     <p class="empty-title h5">Not connected</p>
-                                    <p class="empty-subtitle">You are not connected to a Rolld server.</p>
+                                    <p class="empty-subtitle hide-sm">You are not connected to a Rolld server.</p>
                                     <div class="empty-action">
                                         Use the <b>Connect</b> area above to make a connection
                                         to a Rolld server.
@@ -124,11 +127,44 @@
                             </div>
                             <div class="panel-footer">
                                 <!-- buttons or inputs -->
-                                <input type="text" id="commands" placeholder="Roll here" />
+                                <input class="form-input connected-only" type="text" id="commands" placeholder="Roll here" />
+                            </div>
+                            <div class="modal modal-sm" id="help-text">
+                                <a href="#close" class="modal-overlay" aria-label="Close"></a>
+                                <div class="modal-container">
+                                    <div class="modal-header">
+                                        <a id="help-text-close" href="#close" class="btn btn-clear float-right quit-no" aria-label="Close"></a>
+                                        <div class="modal-title h5">Help</div>
+                                    </div>
+                                    <div class="modal-body">
+                                        <div class="content">
+                                            <p>Commands: <i>roll, </i><i>quit,</i> and <i>help.</i></p>
+                                            <p>
+                                                Use the <i>roll</i> command to ask the server to make a
+                                                die roll on your behalf. Just type <i>roll</i> along with
+                                                kind and number of dice along with other modifiers.
+                                            </p>
+                                            <p>
+                                                For instance:
+                                                <ul>
+                                                    <li>roll d20 - roll one 20-sided die</li>
+                                                    <li>roll 2d4 - roll two four-sided die and add them</li>
+                                                    <li>roll 1d8+1 - roll one eight-sided die and add one to the total</li>
+                                                    <li>roll 3d6x6 - roll six sets of three six-sided dice</li>
+                                                    <li>roll 3,4d6x6 - roll six sets of four six-sided dice, only count the best three</li>
+                                                </ul>
+                                            </p>
+                                            <p>
+                                                Use <i>quit</i> to disconnect from the Rolld session. You will be
+                                                able to reconnect later as long as another user is still connected.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
-                    <div class="column col-3">
+                    <div class="column col-3 hide-sm">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
                                 <div class="panel-title">Info</div>
@@ -212,13 +248,14 @@
             let messageSocketReady = false;
 
             let testSuccess = function(data) {
-                if (data = "rolld ack") {
+                if (data === "rolld ack") {
                     $("#server-address-tested").show();
                     serverAddr = $("#rolldaddress").val();
                     $(".connected-only").prop("disabled", false)
                 } else {
                     $("#server-address-tested").hide();
                     serverAddr = "";
+                    alert("Could not contact a Rolld server at the given address. Try again.");
                 }
             };
 
@@ -412,12 +449,6 @@
         }());
 
         $.when($.ready).then(function() {
-            $("#server-address-test").click(function(e) {
-                e.preventDefault();
-                $("#server-address-test").addClass("loading");
-                rolld.server.testServerAddress();
-            });
-
             $("#new-session-start").click(function(e) {
                 e.preventDefault();
                 $("#new-session-start").addClass("loading");
@@ -435,7 +466,11 @@
                     e.preventDefault();
                     let cmd = $("#commands").val();
                     rolld.client.genericMessage("> " + cmd);
-                    rolld.server.sendMessage(cmd);
+                    if (cmd === "help") {
+                        $("#help-text").addClass("active");
+                    } else {
+                        rolld.server.sendMessage(cmd);
+                    }
 
                     $("#commands").val("");
                 }
@@ -457,6 +492,10 @@
                 $("#quit-confirm").removeClass("active");
             });
 
+            $("#help-text-close").click(function(e){
+                $("#help-text").removeClass("active");
+            });
+
             $("#rolldaddress").val(location.host);
             $("#server-address-tested").hide();
             $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
@@ -464,6 +503,26 @@
             $("#startResults").hide();
             $("#info-messages").hide();
             $("#rolls-messages").hide();
+
+            if (location.host === "") {
+                // Not served version, enable server test area and behaviors.
+                $("#server-address-test").click(function(e) {
+                    e.preventDefault();
+                    if ($("#rolldaddress").val() === "") {
+                        alert("You must provide a server address to test.");
+                    } else {
+                        $("#server-address-test").addClass("loading");
+                        rolld.server.testServerAddress();
+                    }
+                });
+
+                $("#server-test").show();
+            } else {
+                serverAddr = location.host;
+                $(".connected-only").prop("disabled", false)
+                
+                $("#server-test").hide();
+            }
         });
     </script>
 </body>
