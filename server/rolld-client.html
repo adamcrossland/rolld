@@ -358,7 +358,7 @@
                         sessionToken = $("#sessionid").val().trim();
                     }
                     
-                    let wsAddr = "ws://" + location.host + "/messages/" + sessionToken + "/" + connectionToken;
+                    let wsAddr = "wss://" + location.host + "/messages/" + sessionToken + "/" + connectionToken;
                     messageSocket = new WebSocket(wsAddr);
                     messageSocket.onopen = messageSocketConnected;
                     messageSocket.onmessage = messageSocketMessage;

@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -61,7 +62,19 @@ func main() {
 
 	sessionLock = new(sync.Mutex)
 
-	http.ListenAndServe(servingAddress, nil)
+	certPath := os.Getenv("ROLLD_SERVER_CERTPATH")
+	if certPath == "" {
+		panic("enviornment variable ROLLD_SERVER_CERTPATH must be set")
+	}
+	keyPath := os.Getenv("ROLLD_SERVER_KEYPATH")
+	if keyPath == "" {
+		panic("enviornment variable ROLLD_SERVER_KEYPATH must be set")
+	}
+
+	httpErr := http.ListenAndServeTLS(servingAddress, certPath, keyPath, nil)
+	if httpErr != nil {
+		log.Fatalf("error starting web server: %v\n", httpErr)
+	}
 }
 
 // Initiate a new rolld session. Returns a SessionID that must be included
