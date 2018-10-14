@@ -76,14 +76,20 @@ func (session CommSession) AddConnection(id string, name string, w http.Response
 			messType, message, err := newConn.Connection.ReadMessage()
 
 			if err != nil {
+				stillTicking = false
+				delete(session.Connections, id)
+
 				if strings.HasPrefix(err.Error(), "websocket: close") {
 					// Client has closed the connection
-					stillTicking = false
-					delete(session.Connections, id)
 					session.Commands <- fmt.Sprintf("%s quit %s", id, name)
 					continue
+				} else if strings.Contains(err.Error(), "connection timed out") {
+					session.Commands <- fmt.Sprintf("%s timeout %s", id, name)
+					continue
 				} else {
+					session.Commands <- fmt.Sprintf("%s dropped %s", id, name)
 					log.Printf("error while reading websocket: %v", err)
+					continue
 				}
 			}
 
@@ -155,9 +161,21 @@ func sharedProcessor(session *CommSession) {
 
 		case "quit":
 			session.members = ""
-			byeMessage := fmt.Sprintf("%s has left", data)
+			byeMessage := fmt.Sprintf("%s has quit", data)
 			session.broadcastMessage(byeMessage)
 			session.Commands <- "0 members" // Force a members update
+
+		case "timeout":
+			session.members = ""
+			byeMessage := fmt.Sprintf("%s was dropped for inactivity", data)
+			session.broadcastMessage(byeMessage)
+			session.Commands <- "0 members"
+
+		case "dropped":
+			session.members = ""
+			byeMessage := fmt.Sprintf("%s dropped mysteriously", data)
+			session.broadcastMessage(byeMessage)
+			session.Commands <- "0 members"
 
 		case "add":
 			session.members = ""
