@@ -127,7 +127,7 @@
                             </div>
                             <div class="panel-footer">
                                 <!-- buttons or inputs -->
-                                <input class="form-input connected-only" type="text" id="commands" placeholder="Roll here" />
+                                <input class="form-input" type="text" id="commands" placeholder="Roll here" />
                             </div>
                             <div class="modal modal-sm" id="help-text">
                                 <a href="#close" class="modal-overlay" aria-label="Close"></a>
@@ -285,9 +285,7 @@
                 }
             };
 
-            let startNewSession = function() {
-                let startCount = $("#start-count").val();
-
+            let startNewSession = function(startCount) {
                 if (startCount != "") {
                     startCount = Number(startCount);
                     if (!Number.isNaN(startCount)) {
@@ -324,6 +322,7 @@
             };
 
             let messageSocketConnected = function() {
+                rolld.client.setConnected();
                 rolld.client.genericMessage("Connected and ready to roll!");
                 messageSocketReady = true;
             }
@@ -342,15 +341,26 @@
                 
             }
 
+            let messageSocketError = function(e) {
+                if (e.currentTarget.readyState !== e.currentTarget.CLOSING) {
+                    console.log("Ws error: " + e);
+                    alert("An error occured communicating with the server. You can try to reconnect. If it doesn't work, the server may be down.");
+                    rolld.client.setDisconnected();
+                } else {
+                    messageSocketClose();
+                }
+            }
+
+            let messageSocketClose = function(e) {
+                rolld.client.serverDisconnectMessage();
+                messageSocketReady = false;
+                messageSocket = null;
+                rolld.client.setDisconnected();
+            }
+
             let connectSuccess = function(data) {
                 if (data.trim() != "") {
                     connectionToken = data;
-
-                    $("#info-empty").hide();
-                    $("#rolls-empty").hide();
-                    $("#info-messages").show();
-                    $("#rolls-messages").show();
-                    $('input:radio[name=accordion-radio]:nth(1)').prop('checked',true);
 
                     if (sessionToken === "") {
                         // Need to copy the session field value in to the sessionToken
@@ -362,6 +372,8 @@
                     messageSocket = new WebSocket(wsAddr);
                     messageSocket.onopen = messageSocketConnected;
                     messageSocket.onmessage = messageSocketMessage;
+                    messageSocket.onerror = messageSocketError;
+                    messageSocket.onclose = messageSocketClose;
                 } else {
                     alert("Could not connect. Please try again later?");
                 }
@@ -382,6 +394,12 @@
             }
 
             let startNewConnection = function() {
+                if (sessionToken !== "" && connectionToken !== "") {
+                    connectSuccess(connectionToken);
+                    $("#new-connection-start").removeClass("loading");
+                    return;
+                }
+
                 let sessionID = $("#sessionid").val().trim();
 
                 if (sessionID != "") {
@@ -411,6 +429,7 @@
 
             let sendQuit = function() {
                 sendMessage("quit");
+                messageSocket.close();
             }
 
             return {
@@ -425,6 +444,10 @@
         rolld.client = (function() {
             let messageArea = $("#rolls-messages");
             let membersArea = $("#members");
+            let needsServerDialog = false;
+            let userInitiatedDisconnect = false;
+            let commandHistory = [];
+            let historyPos = 0;
 
             let genericMessage = function(message) {
                 var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
@@ -435,94 +458,175 @@
             let updateMembers = function(members) {
                 let memberText = tmpl($("#membersTemplate").html(), {members: members});
                 membersArea.html(memberText);
-            }
+            };
 
             let quit = function() {
                 rolld.server.quit();
             };
 
+            let setDisconnected = function() {
+                $("#rolldaddress").val(location.host);
+                $("#server-address-tested").hide();
+                $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
+                if (needsServerDialog) {
+                    $("#server-test").show();
+                    $(".connected-only").prop("disabled", true);
+                } else {
+                    $(".connected-only").prop("disabled", false)
+                    $("#server-test").hide();
+                }
+
+                $("#commands").prop("disabled", true);
+                $("#startResults").hide();
+                $("#info-messages").hide();
+                $("#info-messages").html("");
+                $("#info-messages").hide();
+                membersArea.html("");
+                membersArea.hide();
+                $("#rolls-messages").hide();
+                $("#rolls-messsages").html("");
+                $("#info-empty").show();
+                $("#rolls-empty").show();
+            };
+
+            let setConnected = function() {
+                $(".connected-only").prop("disabled", false);
+                $("#info-empty").hide();
+                $("#rolls-empty").hide();
+                $('input:radio[name=accordion-radio]:nth(1)').prop('checked',true);
+                $("#info-messages").show();
+                membersArea.show();
+                $("#rolls-messages").show();
+                $("#commands").prop("disabled", false);
+            }
+
+            let serverDisconnectMessage = function() {
+                if (!userInitiatedDisconnect) {
+                    alert("The server disconnected. You might or might not be able to reconnect.");
+                }
+                
+                userInitiatedDisconnect = false
+            }
+
+            let init = function() {
+                if (location.host == "") {
+                    needsServerDialog = true;
+                    // Not served version, enable server test area and behaviors.
+                    $("#server-address-test").click(function(e) {
+                        e.preventDefault();
+                        if ($("#rolldaddress").val() === "") {
+                            alert("You must provide a server address to test.");
+                        } else {
+                            $("#server-address-test").addClass("loading");
+                            rolld.server.testServerAddress();
+                        }
+                    });
+                } else {
+                    serverAddr = location.host;
+                }
+
+                $("#new-session-start").click(function(e) {
+                    e.preventDefault();
+                    $("#new-session-start").addClass("loading");
+                    rolld.server.startNewSession($("#start-count").val());
+                });
+
+                $("#new-connection-start").click(function(e) {
+                    e.preventDefault();
+                    $("#new-connection-start").addClass("loading");
+                    rolld.server.startNewConnection();
+                });
+
+                $("#name").keydown(function(e) {
+                    if (e.keyCode === 13) {
+                        let name = $("#name").val();
+                        if (name.length > 0) {
+                            e.preventDefault();
+                            $("#new-connection-start").click();
+                        }
+                    }
+                });
+
+                $("#start-count").keydown(function(e){
+                    if (e.keyCode === 13) {
+                        let count = $("#start-count").val();
+                        if (count.length > 0) {
+                            e.preventDefault();
+                            $("#new-session-start").click();
+                        }
+                    }
+                });
+
+                $("#commands").keydown(function(e) {
+                    switch (e.keyCode) {
+                        case 13: // Return
+                            let cmd = $("#commands").val();
+                            if (cmd.length > 0) {
+                                e.preventDefault();
+                                
+                                rolld.client.genericMessage("> " + cmd);
+                                if (cmd === "help") {
+                                    $("#help-text").addClass("active");
+                                } else {
+                                    rolld.server.sendMessage(cmd);
+                                }
+
+                                commandHistory.push(cmd);
+                                historyPos = commandHistory.length;
+                                $("#commands").val("");
+                            }
+                            break;
+                        case 38: // Arrow up
+                            if (historyPos > 0) {
+                                historyPos--;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                            break;
+                        case 40: // Arrow down
+                            if (historyPos < commandHistory.length) {
+                                historyPos++;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                        break;
+                    }
+                });
+
+                $("#quit-button").click(function(e) {
+                    e.preventDefault();
+                    $("#quit-confirm").addClass("active");
+                });
+
+                $("#quit-yes-button").click(function(e) {
+                    e.preventDefault();
+                    $("#quit-confirm").removeClass("active");
+                    userInitiatedDisconnect = true;
+                    rolld.client.quit();
+                });
+
+                $(".quit-no").click(function(e) {
+                    e.preventDefault();
+                    $("#quit-confirm").removeClass("active");
+                });
+
+                $("#help-text-close").click(function(e){
+                    $("#help-text").removeClass("active");
+                });
+            }
+
             return {
                 genericMessage: genericMessage,
                 updateMembers: updateMembers,
-                quit: quit
+                quit: quit,
+                setConnected: setConnected,
+                setDisconnected: setDisconnected,
+                init: init,
+                serverDisconnectMessage: serverDisconnectMessage
             };
         }());
 
         $.when($.ready).then(function() {
-            $("#new-session-start").click(function(e) {
-                e.preventDefault();
-                $("#new-session-start").addClass("loading");
-                rolld.server.startNewSession();
-            });
-
-            $("#new-connection-start").click(function(e) {
-                e.preventDefault();
-                $("#new-connection-start").addClass("loading");
-                rolld.server.startNewConnection();
-            });
-
-            $("#commands").keydown(function(e) {
-                if (e.keyCode === 13) {
-                    e.preventDefault();
-                    let cmd = $("#commands").val();
-                    rolld.client.genericMessage("> " + cmd);
-                    if (cmd === "help") {
-                        $("#help-text").addClass("active");
-                    } else {
-                        rolld.server.sendMessage(cmd);
-                    }
-
-                    $("#commands").val("");
-                }
-            });
-
-            $("#quit-button").click(function(e) {
-                e.preventDefault();
-                $("#quit-confirm").addClass("active");
-            });
-
-            $("#quit-yes-button").click(function(e) {
-                e.preventDefault();
-                $("#quit-confirm").removeClass("active");
-                rolld.client.quit();
-            });
-
-            $(".quit-no").click(function(e) {
-                e.preventDefault();
-                $("#quit-confirm").removeClass("active");
-            });
-
-            $("#help-text-close").click(function(e){
-                $("#help-text").removeClass("active");
-            });
-
-            $("#rolldaddress").val(location.host);
-            $("#server-address-tested").hide();
-            $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
-            $(".connected-only").prop("disabled", true);
-            $("#startResults").hide();
-            $("#info-messages").hide();
-            $("#rolls-messages").hide();
-
-            if (location.host === "") {
-                // Not served version, enable server test area and behaviors.
-                $("#server-address-test").click(function(e) {
-                    e.preventDefault();
-                    if ($("#rolldaddress").val() === "") {
-                        alert("You must provide a server address to test.");
-                    } else {
-                        $("#server-address-test").addClass("loading");
-                        rolld.server.testServerAddress();
-                    }
-                });
-
-                $("#server-test").show();
-            } else {
-                serverAddr = location.host;
-                $(".connected-only").prop("disabled", false)
-                
-                $("#server-test").hide();
-            }
+            rolld.client.init();
+            rolld.client.setDisconnected();
         });
     </script>
 </body>
