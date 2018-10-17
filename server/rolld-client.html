@@ -127,7 +127,7 @@
                             </div>
                             <div class="panel-footer">
                                 <!-- buttons or inputs -->
-                                <input class="form-input connected-only" type="text" id="commands" placeholder="Roll here" />
+                                <input class="form-input" type="text" id="commands" placeholder="Roll here" />
                             </div>
                             <div class="modal modal-sm" id="help-text">
                                 <a href="#close" class="modal-overlay" aria-label="Close"></a>
@@ -467,8 +467,14 @@
                 $("#server-address-tested").hide();
                 $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
                 if (needsServerDialog) {
+                    $("#server-test").show();
                     $(".connected-only").prop("disabled", true);
+                } else {
+                    $(".connected-only").prop("disabled", false)
+                    $("#server-test").hide();
                 }
+
+                $("#commands").prop("disabled", true);
                 $("#startResults").hide();
                 $("#info-messages").hide();
                 $("#info-messages").html("");
@@ -479,13 +485,6 @@
                 $("#rolls-messsages").html("");
                 $("#info-empty").show();
                 $("#rolls-empty").show();
-                
-                if (needsServerDialog) {
-                    $("#server-test").show();
-                } else {
-                    $(".connected-only").prop("disabled", false)
-                    $("#server-test").hide();
-                }
             };
 
             let setConnected = function() {
@@ -496,6 +495,7 @@
                 $("#info-messages").show();
                 membersArea.show();
                 $("#rolls-messages").show();
+                $("#commands").prop("disabled", false);
             }
 
             let serverDisconnectMessage = function() {
