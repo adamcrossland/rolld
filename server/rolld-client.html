@@ -127,7 +127,7 @@
                             </div>
                             <div class="panel-footer">
                                 <!-- buttons or inputs -->
-                                <input class="form-input connected-only" type="text" id="commands" placeholder="Roll here" />
+                                <input class="form-input" type="text" id="commands" placeholder="Roll here" />
                             </div>
                             <div class="modal modal-sm" id="help-text">
                                 <a href="#close" class="modal-overlay" aria-label="Close"></a>
@@ -446,6 +446,8 @@
             let membersArea = $("#members");
             let needsServerDialog = false;
             let userInitiatedDisconnect = false;
+            let commandHistory = [];
+            let historyPos = 0;
 
             let genericMessage = function(message) {
                 var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
@@ -467,8 +469,14 @@
                 $("#server-address-tested").hide();
                 $('input:radio[name=accordion-radio]:nth(0)').prop('checked',true);
                 if (needsServerDialog) {
+                    $("#server-test").show();
                     $(".connected-only").prop("disabled", true);
+                } else {
+                    $(".connected-only").prop("disabled", false)
+                    $("#server-test").hide();
                 }
+
+                $("#commands").prop("disabled", true);
                 $("#startResults").hide();
                 $("#info-messages").hide();
                 $("#info-messages").html("");
@@ -479,13 +487,6 @@
                 $("#rolls-messsages").html("");
                 $("#info-empty").show();
                 $("#rolls-empty").show();
-                
-                if (needsServerDialog) {
-                    $("#server-test").show();
-                } else {
-                    $(".connected-only").prop("disabled", false)
-                    $("#server-test").hide();
-                }
             };
 
             let setConnected = function() {
@@ -496,6 +497,7 @@
                 $("#info-messages").show();
                 membersArea.show();
                 $("#rolls-messages").show();
+                $("#commands").prop("disabled", false);
             }
 
             let serverDisconnectMessage = function() {
@@ -535,18 +537,57 @@
                     rolld.server.startNewConnection();
                 });
 
-                $("#commands").keydown(function(e) {
+                $("#name").keydown(function(e) {
                     if (e.keyCode === 13) {
-                        e.preventDefault();
-                        let cmd = $("#commands").val();
-                        rolld.client.genericMessage("> " + cmd);
-                        if (cmd === "help") {
-                            $("#help-text").addClass("active");
-                        } else {
-                            rolld.server.sendMessage(cmd);
+                        let name = $("#name").val();
+                        if (name.length > 0) {
+                            e.preventDefault();
+                            $("#new-connection-start").click();
                         }
+                    }
+                });
 
-                        $("#commands").val("");
+                $("#start-count").keydown(function(e){
+                    if (e.keyCode === 13) {
+                        let count = $("#start-count").val();
+                        if (count.length > 0) {
+                            e.preventDefault();
+                            $("#new-session-start").click();
+                        }
+                    }
+                });
+
+                $("#commands").keydown(function(e) {
+                    switch (e.keyCode) {
+                        case 13: // Return
+                            let cmd = $("#commands").val();
+                            if (cmd.length > 0) {
+                                e.preventDefault();
+                                
+                                rolld.client.genericMessage("> " + cmd);
+                                if (cmd === "help") {
+                                    $("#help-text").addClass("active");
+                                } else {
+                                    rolld.server.sendMessage(cmd);
+                                }
+
+                                commandHistory.push(cmd);
+                                historyPos = commandHistory.length;
+                                $("#commands").val("");
+                            }
+                            break;
+                        case 38: // Arrow up
+                            if (historyPos > 0) {
+                                historyPos--;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                            break;
+                        case 40: // Arrow down
+                            if (historyPos < commandHistory.length) {
+                                historyPos++;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                        break;
                     }
                 });
 
