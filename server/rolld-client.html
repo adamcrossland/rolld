@@ -545,6 +545,16 @@
                     }
                 });
 
+                $("#start-count").keydown(function(e){
+                    if (e.keyCode === 13) {
+                        let count = $("#start-count").val();
+                        if (count.length > 0) {
+                            e.preventDefault();
+                            $("#new-session-start").click();
+                        }
+                    }
+                });
+
                 $("#commands").keydown(function(e) {
                     if (e.keyCode === 13) {
                         let cmd = $("#commands").val();
