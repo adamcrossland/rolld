@@ -446,6 +446,8 @@
             let membersArea = $("#members");
             let needsServerDialog = false;
             let userInitiatedDisconnect = false;
+            let commandHistory = [];
+            let historyPos = 0;
 
             let genericMessage = function(message) {
                 var addedMessage = tmpl($("#genericMessageTemplate").html(), {message: message});
@@ -556,20 +558,36 @@
                 });
 
                 $("#commands").keydown(function(e) {
-                    if (e.keyCode === 13) {
-                        let cmd = $("#commands").val();
-                        if (cmd.length > 0) {
-                            e.preventDefault();
-                            
-                            rolld.client.genericMessage("> " + cmd);
-                            if (cmd === "help") {
-                                $("#help-text").addClass("active");
-                            } else {
-                                rolld.server.sendMessage(cmd);
-                            }
+                    switch (e.keyCode) {
+                        case 13: // Return
+                            let cmd = $("#commands").val();
+                            if (cmd.length > 0) {
+                                e.preventDefault();
+                                
+                                rolld.client.genericMessage("> " + cmd);
+                                if (cmd === "help") {
+                                    $("#help-text").addClass("active");
+                                } else {
+                                    rolld.server.sendMessage(cmd);
+                                }
 
-                            $("#commands").val("");
-                        }
+                                commandHistory.push(cmd);
+                                historyPos = commandHistory.length;
+                                $("#commands").val("");
+                            }
+                            break;
+                        case 38: // Arrow up
+                            if (historyPos > 0) {
+                                historyPos--;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                            break;
+                        case 40: // Arrow down
+                            if (historyPos < commandHistory.length) {
+                                historyPos++;
+                                $("#commands").val(commandHistory[historyPos]);
+                            }
+                        break;
                     }
                 });
 
