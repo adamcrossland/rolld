@@ -535,6 +535,16 @@
                     rolld.server.startNewConnection();
                 });
 
+                $("#name").keydown(function(e) {
+                    if (e.keyCode === 13) {
+                        let name = $("#name").val();
+                        if (name.length > 0) {
+                            e.preventDefault();
+                            $("#new-connection-start").click();
+                        }
+                    }
+                });
+
                 $("#commands").keydown(function(e) {
                     if (e.keyCode === 13) {
                         let cmd = $("#commands").val();
