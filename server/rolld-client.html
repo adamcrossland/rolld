@@ -537,16 +537,19 @@
 
                 $("#commands").keydown(function(e) {
                     if (e.keyCode === 13) {
-                        e.preventDefault();
                         let cmd = $("#commands").val();
-                        rolld.client.genericMessage("> " + cmd);
-                        if (cmd === "help") {
-                            $("#help-text").addClass("active");
-                        } else {
-                            rolld.server.sendMessage(cmd);
-                        }
+                        if (cmd.length > 0) {
+                            e.preventDefault();
+                            
+                            rolld.client.genericMessage("> " + cmd);
+                            if (cmd === "help") {
+                                $("#help-text").addClass("active");
+                            } else {
+                                rolld.server.sendMessage(cmd);
+                            }
 
-                        $("#commands").val("");
+                            $("#commands").val("");
+                        }
                     }
                 });
 
