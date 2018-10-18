@@ -19,6 +19,9 @@ import (
 
 var model *models.RolldModel
 var sessions map[string]*rolldcomm.CommSession
+
+// The sessionLock mutex is used to make sure that access to the database happens
+// one-at-a-time. THe DB is sqlite, which is single-threaded for writes.
 var sessionLock *sync.Mutex
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
@@ -77,7 +80,7 @@ func main() {
 	}
 }
 
-// Initiate a new rolld session. Returns a SessionID that must be included
+// Initiate a new Rolld session. Returns a SessionID that must be included
 // in all subsequent API calls.
 func start(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
@@ -169,10 +172,17 @@ func messages(w http.ResponseWriter, r *http.Request) {
 	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, w, r)
 }
 
+// Send an acknowledgement message to let the client know that they are talking
+// to a Rolld server.
 func hello(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "rolld ack")
 }
 
+// Serve the default web client file. By default, the file is cached to reduce
+// disk I/O. This behavior can be over-ridden by starting the server with a
+// parameter of --no-cached. The use case for this is doing development work on
+// the client; changes can be tested without having to stop and re-start the
+// server each time.
 func client(w http.ResponseWriter, r *http.Request) {
 	// First, make sure that we have tyhe client loaded. We keep a cached copy
 	// since it is not large and needn't be read from disk each time.

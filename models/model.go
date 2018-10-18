@@ -9,10 +9,13 @@ import (
 	"github.com/adamcrossland/rolld/manageddb"
 )
 
+// RolldModel encapsulates information about the backing store database.
 type RolldModel struct {
 	db *manageddb.ManagedDB
 }
 
+// Session comprises all of the information about a particular instance
+// of users together.
 type Session struct {
 	model           *RolldModel
 	ID              string
@@ -20,6 +23,8 @@ type Session struct {
 	Created         int64
 }
 
+// Connection comprises all of the information about a particular member
+// of a Session.
 type Connection struct {
 	model     *RolldModel
 	ID        string
@@ -28,6 +33,7 @@ type Connection struct {
 	Created   int64
 }
 
+// NewModel create a new RolldModel instance.
 func NewModel(db *manageddb.ManagedDB) *RolldModel {
 	newModel := new(RolldModel)
 	newModel.db = db
@@ -35,6 +41,7 @@ func NewModel(db *manageddb.ManagedDB) *RolldModel {
 	return newModel
 }
 
+// NewSession adds a new Session to the database.
 func (model *RolldModel) NewSession(connectionCount int) Session {
 	stored := false
 	timestamp := time.Now().Unix()
@@ -57,6 +64,7 @@ func (model *RolldModel) NewSession(connectionCount int) Session {
 	return newSession
 }
 
+// GetSession retrieves Session information from the database.
 func (model *RolldModel) GetSession(sessionID string) (*Session, error) {
 	row := model.db.DB.QueryRow("select id, connections, created from sessions where id = ?", sessionID)
 
@@ -73,12 +81,13 @@ func (model *RolldModel) GetSession(sessionID string) (*Session, error) {
 		foundSession.ConnectionCount = count
 		foundSession.Created = created
 	} else {
-		return nil, fmt.Errorf("session %s does not exist.", sessionID)
+		return nil, fmt.Errorf("session %s does not exist", sessionID)
 	}
 
 	return foundSession, nil
 }
 
+// GetConnection retrieves Connection information from the database.
 func (session Session) GetConnection(id string) (*Connection, error) {
 	row := session.model.db.DB.QueryRow("select id, name, created from connections where id = ? and session = ?", id, session.ID)
 
@@ -102,6 +111,8 @@ func (session Session) GetConnection(id string) (*Connection, error) {
 	return foundConnection, nil
 }
 
+// NameTaken returns true if the given name has already been claimed in the given Session.
+// Names must be unique within Sessions.
 func (session Session) NameTaken(name string) bool {
 	found := false
 	row := session.model.db.DB.QueryRow("select count(1) from connections where session = ? and name = ?", session.ID, name)
@@ -114,6 +125,7 @@ func (session Session) NameTaken(name string) bool {
 	return found
 }
 
+// AddConnection creates and associates a new Connection with a given Session.
 func (session Session) AddConnection(name string) (*Connection, error) {
 	if session.NameTaken(name) {
 		return nil, errors.New("that name is already taken")
