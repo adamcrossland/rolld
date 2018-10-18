@@ -2,12 +2,11 @@
 ## A server that provides die-rolling capabilities for distributed clients using WebSockets
 
 This is a little project that I put together in my spare time to learn about Web Sockets as well as to freshen up my
-Go skills, which hadn't gotten much use in a little while.
+Go skills and scratch my own itch. Getting the old D&D gang together in the same place at the same time is nearly impossible,
+so playing over the Internet is increasingly likely.
 
 This is open source, of course, and any one is free to build and spin up their own copy of the server, but for demonstration
-purposes and testing, there is an up-to-date build running at https://rolld.net. If you are a frsutrated fan of FRPGs who just
-can't seem to get the gang together in one place at the same time, try it out as a tool for handling die rolling fairly and
-transparently.
+purposes and testing, there is an up-to-date build running at https://rolld.net. If you are a frustrated fan of FRPGs who may be trying to run a campaign with remote players, try it out as a tool for handling die rolling fairly and transparently.
 
 I welcome contributors, pull requests, issues and feedback.
 
