@@ -108,7 +108,13 @@
                     <div class="column col-3 col-md-10">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
-                                <div class="panel-title">Rolls</div>
+                                <div class="panel-title">
+                                    <div class="float-left">Rolls</div>
+                                    <div class="float-right">
+                                        <button id="help-button" class="btn btn-sm circle btn-primary">?</button>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
                             </div>
                             <div class="panel-body">
                                 <div id="rolls-empty" class="empty">
@@ -555,6 +561,11 @@
                             $("#new-session-start").click();
                         }
                     }
+                });
+
+                $("#help-button").click(function(e){
+                    e.preventDefault();
+                    $("#help-text").addClass("active");
                 });
 
                 $("#commands").keydown(function(e) {
