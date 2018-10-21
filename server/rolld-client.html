@@ -108,7 +108,13 @@
                     <div class="column col-3 col-md-10">
                         <div class="panel rolls-panel">
                             <div class="panel-header">
-                                <div class="panel-title">Rolls</div>
+                                <div class="panel-title">
+                                    <div class="float-left">Rolls</div>
+                                    <div class="float-right">
+                                        <button id="help-button" class="btn btn-sm circle btn-primary">?</button>
+                                    </div>
+                                    <div class="clearfix"></div>
+                                </div>
                             </div>
                             <div class="panel-body">
                                 <div id="rolls-empty" class="empty">
@@ -344,7 +350,7 @@
             let messageSocketError = function(e) {
                 if (e.currentTarget.readyState !== e.currentTarget.CLOSING) {
                     console.log("Ws error: " + e);
-                    alert("An error occured communicating with the server. You can try to reconnect. If it doesn't work, the server may be down.");
+                    rolld.client.serverDisconnectMessage();
                     rolld.client.setDisconnected();
                 } else {
                     messageSocketClose();
@@ -504,8 +510,6 @@
                 if (!userInitiatedDisconnect) {
                     alert("The server disconnected. You might or might not be able to reconnect.");
                 }
-                
-                userInitiatedDisconnect = false
             }
 
             let init = function() {
@@ -534,6 +538,7 @@
                 $("#new-connection-start").click(function(e) {
                     e.preventDefault();
                     $("#new-connection-start").addClass("loading");
+                    userInitiatedDisconnect = false;
                     rolld.server.startNewConnection();
                 });
 
@@ -557,16 +562,23 @@
                     }
                 });
 
+                $("#help-button").click(function(e){
+                    e.preventDefault();
+                    $("#help-text").addClass("active");
+                });
+
                 $("#commands").keydown(function(e) {
                     switch (e.keyCode) {
                         case 13: // Return
-                            let cmd = $("#commands").val();
+                            let cmd = "" + $("#commands").val().toLowerCase().trim();
                             if (cmd.length > 0) {
                                 e.preventDefault();
                                 
                                 rolld.client.genericMessage("> " + cmd);
-                                if (cmd === "help") {
+                                if (cmd.startsWith("help")) {
                                     $("#help-text").addClass("active");
+                                } else if (cmd.startsWith("quit")) {
+                                    showQuitDialog();
                                 } else {
                                     rolld.server.sendMessage(cmd);
                                 }
@@ -593,7 +605,7 @@
 
                 $("#quit-button").click(function(e) {
                     e.preventDefault();
-                    $("#quit-confirm").addClass("active");
+                    showQuitDialog();
                 });
 
                 $("#quit-yes-button").click(function(e) {
@@ -611,6 +623,10 @@
                 $("#help-text-close").click(function(e){
                     $("#help-text").removeClass("active");
                 });
+            }
+
+            function showQuitDialog() {
+                $("#quit-confirm").addClass("active");
             }
 
             return {
