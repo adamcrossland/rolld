@@ -74,10 +74,24 @@ func main() {
 		panic("enviornment variable ROLLD_SERVER_KEYPATH must be set")
 	}
 
+	go http.ListenAndServe(":80", http.HandlerFunc(redirect))
+
 	httpErr := http.ListenAndServeTLS(servingAddress, certPath, keyPath, nil)
 	if httpErr != nil {
 		log.Fatalf("error starting web server: %v\n", httpErr)
 	}
+}
+
+func redirect(w http.ResponseWriter, req *http.Request) {
+	// remove/add not default ports from req.Host
+	target := "https://" + req.Host + req.URL.Path
+
+	if len(req.URL.RawQuery) > 0 {
+		target += "?" + req.URL.RawQuery
+	}
+
+	log.Printf("redirect to: %s", target)
+	http.Redirect(w, req, target, http.StatusTemporaryRedirect)
 }
 
 // Initiate a new Rolld session. Returns a SessionID that must be included
