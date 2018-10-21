@@ -45,7 +45,7 @@ func main() {
 	if dbFilename == "" {
 		panic("environment variable ROLLD_DATABASE_FILE must be set")
 	}
-	db := manageddb.NewManagedDB(dbFilename, "sqlite3")
+	db := manageddb.NewManagedDB(dbFilename, "sqlite3", databaseMigrations)
 	model = models.NewModel(db)
 
 	r := mux.NewRouter()

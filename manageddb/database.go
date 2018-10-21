@@ -8,18 +8,18 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// Information pertaining to the database that is being managed. This should
-// probably all be opaque to the user.
+// ManagedDB has all information pertaining to the database that is being managed.
+// This should probably all be opaque to the user.
 type ManagedDB struct {
 	DB               *sql.DB
 	dbLock           chan int
-	migrations       map[int]dbMigration
+	migrations       map[int]DBMigration
 	currentMigration int
 }
 
-// Create an initialize a new ManagedDB with the given file path and
-// datatbase driver.
-func NewManagedDB(dbPath string, driver string) *ManagedDB {
+// NewManagedDB creates and initializes a new ManagedDB with the given file path,
+// datatbase driver and migrations to apply to the db.
+func NewManagedDB(dbPath string, driver string, migrations map[int]DBMigration) *ManagedDB {
 	newDB := new(ManagedDB)
 	var err error
 
@@ -33,10 +33,7 @@ func NewManagedDB(dbPath string, driver string) *ManagedDB {
 	// Figure out what the current migration is
 	newDB.currentMigration = newDB.getCurrentMigration()
 	log.Printf("Current migration level: %d.", newDB.currentMigration)
-	newDB.migrations = map[int]dbMigration{
-		1: dbMigration{up: migration1up, down: migration1down},
-		2: dbMigration{up: migration2up, down: migration2down},
-	}
+	newDB.migrations = migrations
 
 	newDB.databaseMigrate(-1)
 	return newDB
@@ -79,7 +76,7 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 		// Migrating down.
 		for mdb.currentMigration > toMigration {
 			mdb.currentMigration--
-			dbErr = mdb.migrations[mdb.currentMigration].down(mdb.DB)
+			dbErr = mdb.migrations[mdb.currentMigration].Down(mdb.DB)
 			if dbErr != nil {
 				panic(fmt.Sprintf("db migration %d down failed: %v", mdb.currentMigration, dbErr))
 				mdb.currentMigration++
@@ -91,7 +88,7 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 		// Migrating up.
 		for mdb.currentMigration < toMigration {
 			mdb.currentMigration++
-			dbErr = mdb.migrations[mdb.currentMigration].up(mdb.DB)
+			dbErr = mdb.migrations[mdb.currentMigration].Up(mdb.DB)
 			if dbErr != nil {
 				panic(fmt.Sprintf("db migration %d up failed: %v", mdb.currentMigration, dbErr))
 				mdb.currentMigration--
@@ -106,34 +103,13 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 	}
 }
 
-type dbMigrationFunction func(db *sql.DB) error
+// DBMigrationFunction gives the signature of functions that can perform
+// database migrations.
+type DBMigrationFunction func(db *sql.DB) error
 
-type dbMigration struct {
-	up   dbMigrationFunction
-	down dbMigrationFunction
-}
-
-func migration1up(db *sql.DB) error {
-	_, err := db.Exec("create table db_metadata (migration integer); insert into db_metadata (migration) values (0)")
-
-	return err
-}
-
-func migration1down(db *sql.DB) error {
-	_, err := db.Exec("drop table db_metadata")
-
-	return err
-}
-
-func migration2up(db *sql.DB) error {
-	_, err := db.Exec(`create table sessions (id text primary key, connections integer, created integer);
-	create table connections (id text primary key, session text, name text, created integer)`)
-
-	return err
-}
-
-func migration2down(db *sql.DB) error {
-	_, err := db.Exec("drop table sessions")
-
-	return err
+// DBMigration contains two functions, Up and Down that together perform and undo
+// a set of changes to the database.
+type DBMigration struct {
+	Up   DBMigrationFunction
+	Down DBMigrationFunction
 }
