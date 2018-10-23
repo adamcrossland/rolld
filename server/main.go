@@ -54,6 +54,7 @@ func main() {
 	r.HandleFunc("/messages/{session}/{connection}", messages)
 	r.HandleFunc("/hello", hello)
 	r.HandleFunc("/client", client)
+	r.HandleFunc("/robots.txt", robots)
 	r.HandleFunc("/", client)
 	http.Handle("/", r)
 
@@ -209,4 +210,8 @@ func client(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fmt.Fprintf(w, "%s", cachedClient)
+}
+
+func robots(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprint(w, "User-agent: *\nDisallow: /\n")
 }
