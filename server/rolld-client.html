@@ -487,6 +487,7 @@
                 $("#info-messages").hide();
                 $("#info-messages").html("");
                 $("#info-messages").hide();
+                $("#quit-button").hide();
                 membersArea.html("");
                 membersArea.hide();
                 $("#rolls-messages").hide();
@@ -504,6 +505,7 @@
                 membersArea.show();
                 $("#rolls-messages").show();
                 $("#commands").prop("disabled", false);
+                $("#quit-button").show();
             }
 
             let serverDisconnectMessage = function() {
