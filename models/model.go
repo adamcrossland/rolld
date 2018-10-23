@@ -50,8 +50,13 @@ func (model *RolldModel) NewSession(connectionCount int) Session {
 
 	for !stored {
 		newSessionID := GetRandomID(4)
-		_, err := model.db.DB.Exec("insert into sessions (id, connections, created) values (?,?,?)",
-			newSessionID, connectionCount, timestamp)
+
+		err := model.db.DoWrite(func(db *sql.DB) error {
+			_, err := db.Exec("insert into sessions (id, connections, created) values (?,?,?)",
+				newSessionID, connectionCount, timestamp)
+			return err
+		})
+
 		if err == nil {
 			stored = true
 			newSession.ID = newSessionID
@@ -137,7 +142,11 @@ func (session Session) AddConnection(name string) (*Connection, error) {
 	for !saved {
 		newConnectionID := GetRandomID(16)
 		timestamp := time.Now().Unix()
-		_, err := session.model.db.DB.Exec("insert into connections (id, session, name, created) values (?, ?, ?, ?)", newConnectionID, session.ID, name, timestamp)
+		err := session.model.db.DoWrite(func(db *sql.DB) error {
+			_, err := session.model.db.DB.Exec("insert into connections (id, session, name, created) values (?, ?, ?, ?)", newConnectionID, session.ID, name, timestamp)
+			return err
+		})
+
 		if err != nil {
 			return nil, err
 		}

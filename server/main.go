@@ -8,7 +8,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-	"sync"
 
 	"github.com/adamcrossland/rolld/manageddb"
 	"github.com/adamcrossland/rolld/models"
@@ -20,9 +19,6 @@ import (
 var model *models.RolldModel
 var sessions map[string]*rolldcomm.CommSession
 
-// The sessionLock mutex is used to make sure that access to the database happens
-// one-at-a-time. THe DB is sqlite, which is single-threaded for writes.
-var sessionLock *sync.Mutex
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
@@ -63,8 +59,6 @@ func main() {
 		panic("environment variable ROLLD_SERVER_ADDRESS must be set")
 	}
 	fmt.Printf("Listening on %s\n", servingAddress)
-
-	sessionLock = new(sync.Mutex)
 
 	certPath := os.Getenv("ROLLD_SERVER_CERTPATH")
 	if certPath == "" {
@@ -178,11 +172,9 @@ func messages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	sessionLock.Lock()
 	if sessions[sessionID] == nil {
 		sessions[sessionID] = rolldcomm.NewCommSession(sessionID)
 	}
-	sessionLock.Unlock()
 
 	sessions[sessionID].AddConnection(connectionID, requestedConnection.Name, w, r)
 }
