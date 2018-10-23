@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"sync"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -12,7 +13,7 @@ import (
 // This should probably all be opaque to the user.
 type ManagedDB struct {
 	DB               *sql.DB
-	dbLock           chan int
+	dbLock           *sync.Mutex
 	migrations       map[int]DBMigration
 	currentMigration int
 }
@@ -28,7 +29,7 @@ func NewManagedDB(dbPath string, driver string, migrations map[int]DBMigration) 
 		panic(fmt.Sprintf("err opening database: %v", err))
 	}
 
-	newDB.dbLock = make(chan int)
+	newDB.dbLock = new(sync.Mutex)
 
 	// Figure out what the current migration is
 	newDB.currentMigration = newDB.getCurrentMigration()
@@ -101,6 +102,19 @@ func (mdb ManagedDB) databaseMigrate(toMigration int) {
 	} else {
 		log.Printf("No migrations to perform.")
 	}
+}
+
+type ManagedDBWriteFunc func(db *sql.DB) error
+
+// DoWrite executes the provided ManagedDBWriteFunc in a safely
+// single-threaded way. All writes to the underlying DB should happen
+// in this way.
+func (mdb ManagedDB) DoWrite(writeFunc ManagedDBWriteFunc) error {
+	mdb.dbLock.Lock()
+	writeErr := writeFunc(mdb.DB)
+	mdb.dbLock.Unlock()
+
+	return writeErr
 }
 
 // DBMigrationFunction gives the signature of functions that can perform
