@@ -148,17 +148,16 @@ func sharedProcessor(session *CommSession) {
 			if specErr != nil {
 				errMessage := fmt.Sprintf("die roll format error: %v", specErr)
 				session.Connections[issuer].Connection.WriteMessage(websocket.TextMessage, []byte(errMessage))
-				return
+			} else {
+
+				rollResults := roller.DoRolls(*spec)
+				rollMessage := fmt.Sprintf("%s rolled %s: ", session.Connections[issuer].Name, data)
+				for rollI := 0; rollI < rollResults.Count; rollI++ {
+					rollMessage += fmt.Sprintf("%d ", rollResults.Rolls[rollI].Total)
+				}
+
+				session.broadcastMessage(rollMessage)
 			}
-
-			rollResults := roller.DoRolls(*spec)
-			rollMessage := fmt.Sprintf("%s rolled %s: ", session.Connections[issuer].Name, data)
-			for rollI := 0; rollI < rollResults.Count; rollI++ {
-				rollMessage += fmt.Sprintf("%d ", rollResults.Rolls[rollI].Total)
-			}
-
-			session.broadcastMessage(rollMessage)
-
 		case "quit":
 			session.members = ""
 			byeMessage := fmt.Sprintf("%s has quit", data)
