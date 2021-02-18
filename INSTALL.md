@@ -21,4 +21,9 @@ client file `rolld-client.html` to wherever they will live on your server.
 
 5. Use your OS-specific means to get the `server` executable running and staying running.
 
+## CAVEAT EMPTOR
+At this time (Oct 18 2018), the server process expects to be able to read from the UNIX-specific file /dev/urandom, so it will not run on
+OSs. That do not have this file. If you want to build and run Rolld on your Windows machine, consider using WSL. This dependency
+has an Issue assocuiated with it, and it will be removed in the relatively near future.
+
 ## At this point, you should have a running instance of Rolld.
